@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load project_tags %}
+
+{% block title %}المشاريع{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>المشاريع</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.projects.add_project %}
+            <a href="{% url 'web_projects:project_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة مشروع جديد
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- لوحة المعلومات -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-clipboard-list fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">إجمالي المشاريع</h6>
+                            <h3 class="mb-0">{{ total_projects }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-tasks fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">قيد التنفيذ</h6>
+                            <h3 class="mb-0">{{ active_projects }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">مكتملة</h6>
+                            <h3 class="mb-0">{{ completed_projects }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">متأخرة</h6>
+                            <h3 class="mb-0">{{ delayed_projects }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">بحث</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ request.GET.search }}" 
+                           placeholder="اسم المشروع، رقم المشروع...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">الحالة</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="planning" {% if request.GET.status == 'planning' %}selected{% endif %}>تخطيط</option>
+                        <option value="in_progress" {% if request.GET.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                        <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>متوقف</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">بحث</button>
+                    <a href="{% url 'web_projects:project_list' %}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول المشاريع -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>الكود</th>
+                            <th>اسم المشروع</th>
+                            <th>تاريخ البدء</th>
+                            <th>تاريخ التسليم</th>
+                            <th>نسبة الإنجاز</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td>{{ project.code }}</td>
+                            <td>
+                                <a href="{% url 'web_projects:project_detail' project.pk %}">
+                                    {{ project.name }}
+                                </a>
+                            </td>
+                            <td>{{ project.start_date|date:"Y/m/d" }}</td>
+                            <td>
+                                {{ project.end_date|date:"Y/m/d" }}
+                                {% if project.is_delayed %}
+                                <span class="badge bg-danger">متأخر</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    {% with progress=project.completion_percentage %}
+                                    <div class="progress-bar {% if progress == 100 %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ progress }}%"
+                                         aria-valuenow="{{ progress }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ progress }}%
+                                    </div>
+                                    {% endwith %}
+                                </div>
+                            </td>
+                            <td>
+                                {% project_status_badge project.status %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'web_projects:project_detail' project.pk %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="عرض">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if perms.projects.change_project %}
+                                    <a href="{% url 'web_projects:project_update' project.pk %}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.projects.delete_project %}
+                                    <a href="{% url 'web_projects:project_delete' project.pk %}" 
+                                       class="btn btn-sm btn-danger" 
+                                       title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">لا توجد مشاريع</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تحسين قوائم الاختيار
+        $('#status').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر الحالة',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

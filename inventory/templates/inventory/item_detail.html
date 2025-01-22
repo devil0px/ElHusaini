@@ -1,0 +1,225 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ item.name }} - تفاصيل الصنف{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>{{ item.name }}</h2>
+        <p class="text-muted">{{ item.code }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'inventory:item_update' item.id %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> تعديل
+        </a>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="fas fa-trash"></i> حذف
+        </button>
+    </div>
+</div>
+
+<!-- Item Details -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">معلومات أساسية</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>الفئة:</th>
+                        <td>{{ item.category.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>وحدة القياس:</th>
+                        <td>{{ item.get_unit_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>سعر الشراء:</th>
+                        <td>{{ item.purchase_price }}</td>
+                    </tr>
+                    <tr>
+                        <th>سعر البيع:</th>
+                        <td>{{ item.selling_price }}</td>
+                    </tr>
+                    <tr>
+                        <th>الحد الأدنى للكمية:</th>
+                        <td>{{ item.minimum_quantity }}</td>
+                    </tr>
+                    <tr>
+                        <th>نقطة إعادة الطلب:</th>
+                        <td>{{ item.reorder_point }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">حالة المخزون</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h3>{{ current_balance }}</h3>
+                        <p>الرصيد الحالي</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3>{{ total_in }}</h3>
+                        <p>إجمالي الوارد</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3>{{ total_out }}</h3>
+                        <p>إجمالي الصادر</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Suppliers -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">الموردين</h5>
+            </div>
+            <div class="col text-end">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="fas fa-plus"></i> إضافة مورد
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>المورد</th>
+                        <th>السعر</th>
+                        <th>مدة التوريد</th>
+                        <th>مورد مفضل</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supplier in item.suppliers.all %}
+                    <tr>
+                        <td>{{ supplier.name }}</td>
+                        <td>{{ supplier.through.price }}</td>
+                        <td>{{ supplier.through.lead_time_days }} يوم</td>
+                        <td>
+                            {% if supplier.through.is_preferred %}
+                            <span class="badge bg-success">نعم</span>
+                            {% else %}
+                            <span class="badge bg-secondary">لا</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editSupplierModal{{ supplier.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteSupplierModal{{ supplier.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">لا يوجد موردين</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Transactions -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">حركات المخزون</h5>
+            </div>
+            <div class="col text-end">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                    <i class="fas fa-plus"></i> إضافة حركة
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>نوع الحركة</th>
+                        <th>الكمية</th>
+                        <th>السعر</th>
+                        <th>المشروع</th>
+                        <th>المورد</th>
+                        <th>رقم المرجع</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in item.stock_transactions.all %}
+                    <tr>
+                        <td>{{ transaction.created_at }}</td>
+                        <td>
+                            <span class="badge bg-{% if transaction.transaction_type == 'in' %}success{% else %}danger{% endif %}">
+                                {{ transaction.get_transaction_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ transaction.quantity }}</td>
+                        <td>{{ transaction.unit_price }}</td>
+                        <td>{{ transaction.project.name|default:"-" }}</td>
+                        <td>{{ transaction.supplier.name|default:"-" }}</td>
+                        <td>{{ transaction.reference_number }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewTransactionModal{{ transaction.id }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">لا توجد حركات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                هل أنت متأكد من حذف الصنف "{{ item.name }}"؟
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'inventory:item_delete' item.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

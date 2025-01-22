@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير العملاء{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير العملاء</h1>
+                    <p class="text-muted">عرض تفاصيل وإحصائيات العملاء</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر نوع العميل -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="client_type" class="form-label">نوع العميل</label>
+                            <select class="form-select" id="client_type" name="client_type">
+                                <option value="">الكل</option>
+                                {% for type_choice in client_types %}
+                                    <option value="{{ type_choice.type }}" {% if client_type == type_choice.type %}selected{% endif %}>
+                                        {{ type_choice.type_display }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص الإحصائيات -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي العملاء</h5>
+                    <h2 class="mb-0">{{ total_clients }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">العملاء النشطون</h5>
+                    <h2 class="mb-0">{{ active_clients }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المشاريع</h5>
+                    <h2 class="mb-0">{{ total_projects }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي قيمة العقود</h5>
+                    <h2 class="mb-0">{{ total_contract_value|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- التحليلات -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع العملاء حسب النوع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="clientTypesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">أفضل 5 عملاء من حيث قيمة العقود</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>العميل</th>
+                                    <th>عدد المشاريع</th>
+                                    <th>قيمة العقود</th>
+                                    <th>المدفوعات</th>
+                                    <th>المتبقي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client in top_clients %}
+                                    <tr>
+                                        <td>{{ client.name }}</td>
+                                        <td>{{ client.projects_count }}</td>
+                                        <td>{{ client.total_contract_value|floatformat:2 }}</td>
+                                        <td>{{ client.total_payments|floatformat:2 }}</td>
+                                        <td>{{ client.total_due|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل العملاء -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تفاصيل العملاء</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>العميل</th>
+                                    <th>النوع</th>
+                                    <th>الهاتف</th>
+                                    <th>البريد الإلكتروني</th>
+                                    <th>عدد المشاريع</th>
+                                    <th>قيمة العقود</th>
+                                    <th>المدفوعات</th>
+                                    <th>المتبقي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client in clients %}
+                                    <tr>
+                                        <td>{{ client.name }}</td>
+                                        <td>{{ client.get_client_type_display }}</td>
+                                        <td>{{ client.phone }}</td>
+                                        <td>{{ client.email|default:"-" }}</td>
+                                        <td>{{ client.projects_count }}</td>
+                                        <td>{{ client.total_contract_value|floatformat:2 }}</td>
+                                        <td>{{ client.total_payments|floatformat:2 }}</td>
+                                        <td>{{ client.total_due|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // توزيع العملاء حسب النوع
+    var typesCtx = document.getElementById('clientTypesChart').getContext('2d');
+    new Chart(typesCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for type in client_types %}'{{ type.type_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for type in client_types %}{{ type.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

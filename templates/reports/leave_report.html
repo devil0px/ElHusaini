@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير الإجازات{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير الإجازات</h1>
+                    <p class="text-muted">عرض وتحليل بيانات إجازات الموظفين</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الإجازات</h5>
+                    <h2 class="mb-0">{{ total_leaves }}</h2>
+                    <small>في الفترة المحددة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الإجازات المعتمدة</h5>
+                    <h2 class="mb-0">{{ approved_leaves }}</h2>
+                    <small>{{ approved_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">قيد الانتظار</h5>
+                    <h2 class="mb-0">{{ pending_leaves }}</h2>
+                    <small>{{ pending_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الإجازات المرفوضة</h5>
+                    <h2 class="mb-0">{{ rejected_leaves }}</h2>
+                    <small>{{ rejected_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع أنواع الإجازات</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="leaveTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">حالة الإجازات</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="leaveStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل الإجازات -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">سجل الإجازات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الموظف</th>
+                                    <th>نوع الإجازة</th>
+                                    <th>من تاريخ</th>
+                                    <th>إلى تاريخ</th>
+                                    <th>المدة</th>
+                                    <th>الحالة</th>
+                                    <th>تمت الموافقة بواسطة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                    <tr>
+                                        <td>{{ leave.employee.user.get_full_name }}</td>
+                                        <td>{{ leave.get_leave_type_display }}</td>
+                                        <td>{{ leave.start_date|date:"Y-m-d" }}</td>
+                                        <td>{{ leave.end_date|date:"Y-m-d" }}</td>
+                                        <td>{{ leave.duration }} يوم</td>
+                                        <td>
+                                            <span class="badge bg-{% if leave.status == 'approved' %}success{% elif leave.status == 'pending' %}warning{% elif leave.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                                                {{ leave.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ leave.approved_by.get_full_name|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">لا توجد إجازات في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // مخطط أنواع الإجازات
+    var typeCtx = document.getElementById('leaveTypeChart').getContext('2d');
+    new Chart(typeCtx, {
+        type: 'pie',
+        data: {
+            labels: ['سنوية', 'مرضية', 'بدون راتب', 'طارئة', 'أخرى'],
+            datasets: [{
+                data: [
+                    {{ leave_type_stats.annual }},
+                    {{ leave_type_stats.sick }},
+                    {{ leave_type_stats.unpaid }},
+                    {{ leave_type_stats.emergency }},
+                    {{ leave_type_stats.other }}
+                ],
+                backgroundColor: [
+                    '#007bff',  // سنوية
+                    '#6610f2',  // مرضية
+                    '#6f42c1',  // بدون راتب
+                    '#e83e8c',  // طارئة
+                    '#6c757d'   // أخرى
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // مخطط حالة الإجازات
+    var statusCtx = document.getElementById('leaveStatusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['معتمدة', 'قيد الانتظار', 'مرفوضة', 'ملغية'],
+            datasets: [{
+                data: [
+                    {{ approved_leaves }},
+                    {{ pending_leaves }},
+                    {{ rejected_leaves }},
+                    {{ cancelled_leaves }}
+                ],
+                backgroundColor: [
+                    '#28a745',  // معتمدة
+                    '#ffc107',  // قيد الانتظار
+                    '#dc3545',  // مرفوضة
+                    '#6c757d'   // ملغية
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

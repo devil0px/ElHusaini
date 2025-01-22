@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}نظرة عامة - لوحة المعلومات{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">نظرة عامة على المؤسسة</h1>
+                    <p class="text-muted">ملخص شامل لأداء المؤسسة</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الإحصائيات العامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h5 class="card-title">المشاريع النشطة</h5>
+                    <h2 class="mb-0">{{ active_projects_count }}</h2>
+                    <small class="text-muted">{{ projects_completion_rate|floatformat:1 }}% نسبة الإنجاز</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h5 class="card-title">العقود الجديدة</h5>
+                    <h2 class="mb-0">{{ new_contracts_count }}</h2>
+                    <small class="text-muted">{{ new_contracts_value|floatformat:2 }} ريال</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h5 class="card-title">المدفوعات</h5>
+                    <h2 class="mb-0">{{ total_payments|floatformat:2 }}</h2>
+                    <small class="text-muted">{{ payments_count }} دفعة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">المصروفات</h5>
+                    <h2 class="mb-0">{{ total_expenses|floatformat:2 }}</h2>
+                    <small class="text-muted">{{ expenses_count }} مصروف</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المؤشرات المالية -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المدفوعات الشهرية</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyPaymentsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المصروفات الشهرية</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyExpensesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- حالة المشاريع والعقود -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">حالة المشاريع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">حالة العقود</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="contractStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المشاريع المتأخرة -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المشاريع المتأخرة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>اسم المشروع</th>
+                                    <th>مدير المشروع</th>
+                                    <th>تاريخ النهاية المخطط</th>
+                                    <th>التأخير (بالأيام)</th>
+                                    <th>نسبة الإنجاز</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in delayed_projects %}
+                                    <tr>
+                                        <td>{{ project.name }}</td>
+                                        <td>{{ project.project_manager.get_full_name }}</td>
+                                        <td>{{ project.end_date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            <span class="badge bg-danger">{{ project.days_delayed }} يوم</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-warning"
+                                                     role="progressbar"
+                                                     style="width: {{ project.completion_percentage }}%"
+                                                     aria-valuenow="{{ project.completion_percentage }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    {{ project.completion_percentage|floatformat:1 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المدفوعات المتأخرة -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المدفوعات المتأخرة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم العقد</th>
+                                    <th>العميل</th>
+                                    <th>المشروع</th>
+                                    <th>رقم الدفعة</th>
+                                    <th>المبلغ</th>
+                                    <th>تاريخ الاستحقاق</th>
+                                    <th>التأخير (بالأيام)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in overdue_payments %}
+                                    <tr>
+                                        <td>{{ payment.contract.contract_number }}</td>
+                                        <td>{{ payment.contract.project.project_manager.get_full_name }}</td>
+                                        <td>{{ payment.contract.project.name }}</td>
+                                        <td>{{ payment.payment_number }}</td>
+                                        <td>{{ payment.amount|floatformat:2 }}</td>
+                                        <td>{{ payment.due_date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            <span class="badge bg-danger">{{ payment.days_overdue }} يوم</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .progress {
+        background-color: #e9ecef;
+    }
+    .badge {
+        font-size: 0.875rem;
+    }
+    .border-primary {
+        border-top: 3px solid #007bff;
+    }
+    .border-success {
+        border-top: 3px solid #28a745;
+    }
+    .border-info {
+        border-top: 3px solid #17a2b8;
+    }
+    .border-warning {
+        border-top: 3px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // المدفوعات الشهرية
+    var paymentsCtx = document.getElementById('monthlyPaymentsChart').getContext('2d');
+    new Chart(paymentsCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for month in monthly_payments %}'{{ month.month_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'المدفوعات',
+                data: [{% for month in monthly_payments %}{{ month.total_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: '#17a2b8',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // المصروفات الشهرية
+    var expensesCtx = document.getElementById('monthlyExpensesChart').getContext('2d');
+    new Chart(expensesCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for month in monthly_expenses %}'{{ month.month_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'المصروفات',
+                data: [{% for month in monthly_expenses %}{{ month.total_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // حالة المشاريع
+    var projectStatusCtx = document.getElementById('projectStatusChart').getContext('2d');
+    new Chart(projectStatusCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for status in project_status_distribution %}'{{ status.status_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for status in project_status_distribution %}{{ status.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // حالة العقود
+    var contractStatusCtx = document.getElementById('contractStatusChart').getContext('2d');
+    new Chart(contractStatusCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for status in contract_status_distribution %}'{{ status.status_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for status in contract_status_distribution %}{{ status.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

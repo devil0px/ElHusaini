@@ -1,0 +1,182 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}لوحة التحكم - نظام إدارة المخزون{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="mb-4">لوحة التحكم</h2>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">إجمالي الأصناف</h5>
+                <h2 class="card-text">{{ total_items }}</h2>
+                <small>عدد الأصناف المسجلة في النظام</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">طلبات الشراء</h5>
+                <h2 class="card-text">{{ pending_requests }}</h2>
+                <small>طلبات شراء قيد الموافقة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h5 class="card-title">الصيانة</h5>
+                <h2 class="card-text">{{ scheduled_maintenance }}</h2>
+                <small>عمليات صيانة مجدولة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5 class="card-title">التنبيهات</h5>
+                <h2 class="card-text">{{ active_alerts }}</h2>
+                <small>تنبيهات نشطة تحتاج للمعالجة</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Items -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">أصناف منخفضة المخزون</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th>الرصيد الحالي</th>
+                                <th>الحد الأدنى</th>
+                                <th>الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.current_balance }}</td>
+                                <td>{{ item.minimum_quantity }}</td>
+                                <td>
+                                    <a href="{% url 'inventory:purchase-request-create' %}?item={{ item.id }}" class="btn btn-sm btn-primary">
+                                        طلب شراء
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">لا توجد أصناف منخفضة المخزون</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activities -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">آخر النشاطات</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for activity in recent_activities %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ activity.description }}</h6>
+                            <small>{{ activity.created_at|timesince }}</small>
+                        </div>
+                        <p class="mb-1">{{ activity.details }}</p>
+                        <small>بواسطة: {{ activity.user.get_full_name }}</small>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item text-center">
+                        لا توجد نشاطات حديثة
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Maintenance -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">الصيانة القادمة</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th>نوع الصيانة</th>
+                                <th>التاريخ المجدول</th>
+                                <th>المزود</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for maintenance in upcoming_maintenance %}
+                            <tr>
+                                <td>{{ maintenance.item.name }}</td>
+                                <td>{{ maintenance.get_maintenance_type_display }}</td>
+                                <td>{{ maintenance.scheduled_date }}</td>
+                                <td>{{ maintenance.provider.name|default:"-" }}</td>
+                                <td>
+                                    <span class="badge bg-{{ maintenance.status_color }}">
+                                        {{ maintenance.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'inventory:maintenance-detail' maintenance.id %}" class="btn btn-sm btn-info">
+                                        التفاصيل
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">لا توجد عمليات صيانة قادمة</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث البيانات كل 5 دقائق
+    setInterval(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if object %}تعديل {{ object.name }}{% else %}إضافة مورد جديد{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>{% if object %}تعديل {{ object.name }}{% else %}إضافة مورد جديد{% endif %}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.code|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.name|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.contact_person|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.phone|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.email|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.tax_number|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ form.address|as_crispy_field }}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.payment_terms|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.delivery_terms|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ form.notes|as_crispy_field }}
+                    
+                    <div class="form-check mb-3">
+                        {{ form.is_active|as_crispy_field }}
+                    </div>
+
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                        <a href="{% if object %}{% url 'inventory:supplier-detail' object.id %}{% else %}{% url 'inventory:supplier-list' %}{% endif %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">تعليمات</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <i class="fas fa-info-circle text-info"></i>
+                        <strong>الرمز:</strong> يجب أن يكون فريداً لكل مورد
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-info-circle text-info"></i>
+                        <strong>الرقم الضريبي:</strong> رقم السجل الضريبي للمورد (اختياري)
+                    </li>
+                    <li class="mb-3">
+                        <i class="fas fa-info-circle text-info"></i>
+                        <strong>شروط الدفع:</strong> مثال: دفع مقدم 30%، الباقي خلال 30 يوم
+                    </li>
+                    <li>
+                        <i class="fas fa-info-circle text-info"></i>
+                        <strong>شروط التسليم:</strong> مثال: تسليم المستودع خلال 7 أيام
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تنسيق حقول الهاتف
+    $(document).ready(function() {
+        $('#id_phone').on('input', function() {
+            this.value = this.value.replace(/[^0-9+\-]/g, '');
+        });
+    });
+</script>
+{% endblock %}

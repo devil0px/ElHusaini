@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>عقد رقم {{ contract.contract_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm;
+            @frame header {
+                -pdf-frame-content: headerContent;
+                top: 1cm;
+                margin-left: 2.5cm;
+                margin-right: 2.5cm;
+                height: 3cm;
+            }
+            @frame footer {
+                -pdf-frame-content: footerContent;
+                bottom: 1cm;
+                margin-left: 2.5cm;
+                margin-right: 2.5cm;
+                height: 1cm;
+            }
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            direction: rtl;
+            text-align: right;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2em;
+        }
+        .logo {
+            max-width: 200px;
+            margin-bottom: 1em;
+        }
+        .contract-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+        .contract-number {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 2em;
+        }
+        .section {
+            margin-bottom: 2em;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 1em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 0.5em;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+        }
+        .info-table th, .info-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        .info-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            width: 30%;
+        }
+        .payment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+        .payment-table th, .payment-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .payment-table th {
+            background-color: #f5f5f5;
+        }
+        .terms {
+            margin: 2em 0;
+            padding: 1em;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .signatures {
+            margin-top: 4em;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            width: 45%;
+            display: inline-block;
+            margin: 0 2%;
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 3em;
+            padding-top: 0.5em;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 1em;
+        }
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px;
+            color: rgba(200, 200, 200, 0.1);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <!-- ترويسة الصفحة -->
+    <div id="headerContent">
+        <div class="header">
+            <img src="{{ company_logo }}" alt="شعار الشركة" class="logo">
+            <div class="contract-title">عقد مشروع</div>
+            <div class="contract-number">رقم العقد: {{ contract.contract_number }}</div>
+        </div>
+    </div>
+
+    <!-- تذييل الصفحة -->
+    <div id="footerContent">
+        <div class="footer">
+            <p>{{ company_name }} - {{ company_address }} - هاتف: {{ company_phone }}</p>
+            <p>صفحة <pdf:pagenumber> من <pdf:pagecount></p>
+        </div>
+    </div>
+
+    <!-- العلامة المائية -->
+    {% if contract.status == 'draft' %}
+    <div class="watermark">مسودة</div>
+    {% endif %}
+
+    <!-- محتوى العقد -->
+    <div class="content">
+        <!-- معلومات الأطراف -->
+        <div class="section">
+            <div class="section-title">أطراف العقد</div>
+            <table class="info-table">
+                <tr>
+                    <th>الطرف الأول (المقاول)</th>
+                    <td>
+                        <strong>{{ company_name }}</strong><br>
+                        سجل تجاري: {{ company_cr }}<br>
+                        العنوان: {{ company_address }}<br>
+                        هاتف: {{ company_phone }}<br>
+                        البريد الإلكتروني: {{ company_email }}
+                    </td>
+                </tr>
+                <tr>
+                    <th>الطرف الثاني (العميل)</th>
+                    <td>
+                        <strong>{{ contract.client.name }}</strong><br>
+                        {% if contract.client.type == 'company' %}
+                        سجل تجاري: {{ contract.client.commercial_record }}<br>
+                        {% endif %}
+                        العنوان: {{ contract.client.address }}<br>
+                        هاتف: {{ contract.client.phone }}<br>
+                        البريد الإلكتروني: {{ contract.client.email }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- معلومات المشروع -->
+        <div class="section">
+            <div class="section-title">معلومات المشروع</div>
+            <table class="info-table">
+                <tr>
+                    <th>اسم المشروع</th>
+                    <td>{{ contract.project.name }}</td>
+                </tr>
+                <tr>
+                    <th>وصف المشروع</th>
+                    <td>{{ contract.project.description }}</td>
+                </tr>
+                <tr>
+                    <th>موقع المشروع</th>
+                    <td>{{ contract.project.location }}</td>
+                </tr>
+                <tr>
+                    <th>تاريخ البدء</th>
+                    <td>{{ contract.start_date|date }}</td>
+                </tr>
+                <tr>
+                    <th>تاريخ الانتهاء</th>
+                    <td>{{ contract.end_date|date }}</td>
+                </tr>
+                <tr>
+                    <th>مدة التنفيذ</th>
+                    <td>{{ contract.duration }} يوم</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- القيم المالية -->
+        <div class="section">
+            <div class="section-title">القيم المالية</div>
+            <table class="info-table">
+                <tr>
+                    <th>قيمة العقد</th>
+                    <td>{{ contract.value }} ريال</td>
+                </tr>
+                <tr>
+                    <th>نسبة الضريبة</th>
+                    <td>{{ contract.tax_percentage }}%</td>
+                </tr>
+                <tr>
+                    <th>قيمة الضريبة</th>
+                    <td>{{ contract.tax_amount }} ريال</td>
+                </tr>
+                <tr>
+                    <th>إجمالي قيمة العقد</th>
+                    <td>{{ contract.total_value }} ريال</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- شروط الدفع -->
+        <div class="section">
+            <div class="section-title">شروط الدفع</div>
+            <div class="terms">
+                {{ contract.payment_terms|linebreaks }}
+            </div>
+
+            {% if contract.payments.exists %}
+            <table class="payment-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الدفعة</th>
+                        <th>النسبة</th>
+                        <th>القيمة</th>
+                        <th>الشروط</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in contract.payments.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ payment.name }}</td>
+                        <td>{{ payment.percentage }}%</td>
+                        <td>{{ payment.amount }} ريال</td>
+                        <td>{{ payment.conditions }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+
+        <!-- الشروط والأحكام -->
+        <div class="section">
+            <div class="section-title">الشروط والأحكام</div>
+            <div class="terms">
+                <ol>
+                    <li>يلتزم الطرف الأول بتنفيذ المشروع وفقاً للمواصفات والمخططات المتفق عليها.</li>
+                    <li>يلتزم الطرف الثاني بسداد الدفعات في مواعيدها المحددة.</li>
+                    <li>لا يحق لأي من الطرفين التنازل عن العقد للغير إلا بموافقة خطية من الطرف الآخر.</li>
+                    <li>في حالة التأخير في التنفيذ يتم تطبيق غرامة تأخير قدرها {{ penalty_percentage }}% من قيمة العقد عن كل يوم تأخير.</li>
+                    <li>يخضع هذا العقد لأنظمة المملكة العربية السعودية.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- التوقيعات -->
+        <div class="signatures">
+            <div class="signature-box">
+                <strong>الطرف الأول (المقاول)</strong>
+                <div class="signature-line">
+                    الاسم: ____________________<br>
+                    التوقيع: __________________<br>
+                    التاريخ: __________________
+                </div>
+            </div>
+            <div class="signature-box">
+                <strong>الطرف الثاني (العميل)</strong>
+                <div class="signature-line">
+                    الاسم: ____________________<br>
+                    التوقيع: __________________<br>
+                    التاريخ: __________________
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

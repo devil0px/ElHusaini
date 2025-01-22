@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if position %}تعديل وظيفة{% else %}إنشاء وظيفة جديدة{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                {% if position %}
+                تعديل وظيفة: {{ position.title }}
+                {% else %}
+                إنشاء وظيفة جديدة
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.title|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.department|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.salary_range_min|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.salary_range_max|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        {{ form.description|as_crispy_field }}
+                        {{ form.requirements|as_crispy_field }}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {% if position %}حفظ التغييرات{% else %}إنشاء الوظيفة{% endif %}
+                            </button>
+                            <a href="{% url 'hr:position_list' %}" class="btn btn-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تعليمات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>المسمى الوظيفي:</strong> يجب أن يكون وصفياً وواضحاً.
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>القسم:</strong> اختر القسم الذي تتبع له هذه الوظيفة.
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>نطاق الراتب:</strong>
+                            <ul>
+                                <li>الحد الأدنى يجب أن يكون أقل من الحد الأقصى</li>
+                                <li>يجب أن يكون النطاق منطقياً ومتناسباً مع المسمى الوظيفي</li>
+                            </ul>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>الوصف الوظيفي:</strong> اكتب وصفاً تفصيلياً للمهام والمسؤوليات.
+                        </li>
+                        <li>
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>المتطلبات:</strong> حدد المؤهلات والخبرات المطلوبة للوظيفة.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحسين اختيار القسم باستخدام Select2
+    $(document).ready(function() {
+        $('#id_department').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر القسم',
+            allowClear: true
+        });
+
+        // التحقق من نطاق الراتب
+        $('#id_salary_range_min, #id_salary_range_max').on('change', function() {
+            var min = parseFloat($('#id_salary_range_min').val()) || 0;
+            var max = parseFloat($('#id_salary_range_max').val()) || 0;
+            
+            if (min > max && max !== 0) {
+                alert('الحد الأدنى للراتب يجب أن يكون أقل من الحد الأقصى');
+                $(this).val('');
+            }
+        });
+    });
+</script>
+{% endblock %}

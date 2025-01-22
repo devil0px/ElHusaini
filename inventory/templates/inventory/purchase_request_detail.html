@@ -1,0 +1,300 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}تفاصيل طلب الشراء - {{ request.number }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>طلب شراء رقم: {{ request.number }}</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if can_edit %}
+        <a href="{% url 'inventory:purchase_request_update' request.pk %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> تعديل
+        </a>
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="fas fa-trash"></i> حذف
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- معلومات الطلب -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">معلومات الطلب</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th>الحالة:</th>
+                        <td>
+                            <span class="badge bg-{{ request.status_color }}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>المورد:</th>
+                        <td>
+                            <a href="{% url 'inventory:supplier-detail' request.supplier.pk %}">
+                                {{ request.supplier.name }}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>تاريخ الإنشاء:</th>
+                        <td>{{ request.created_at|date }}</td>
+                    </tr>
+                    <tr>
+                        <th>بواسطة:</th>
+                        <td>{{ request.created_by.get_full_name }}</td>
+                    </tr>
+                    {% if request.notes %}
+                    <tr>
+                        <th>ملاحظات:</th>
+                        <td>{{ request.notes }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- معلومات الموافقة -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">معلومات الموافقة</h5>
+            </div>
+            <div class="card-body">
+                {% if request.status == 'draft' and can_approve %}
+                <form method="post" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> موافقة
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="fas fa-times"></i> رفض
+                    </button>
+                </form>
+                {% elif request.status == 'approved' %}
+                <table class="table table-borderless">
+                    <tr>
+                        <th>تمت الموافقة بواسطة:</th>
+                        <td>{{ request.approved_by.get_full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>تاريخ الموافقة:</th>
+                        <td>{{ request.approved_at|date }}</td>
+                    </tr>
+                    {% if not request.completed_at %}
+                    <tr>
+                        <td colspan="2">
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="complete">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check-double"></i> تأكيد استلام الأصناف
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+                {% elif request.status == 'rejected' %}
+                <table class="table table-borderless">
+                    <tr>
+                        <th>تم الرفض بواسطة:</th>
+                        <td>{{ request.rejected_by.get_full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>تاريخ الرفض:</th>
+                        <td>{{ request.rejected_at|date }}</td>
+                    </tr>
+                    <tr>
+                        <th>سبب الرفض:</th>
+                        <td>{{ request.rejection_reason }}</td>
+                    </tr>
+                </table>
+                {% elif request.status == 'completed' %}
+                <table class="table table-borderless">
+                    <tr>
+                        <th>تم الاستلام بواسطة:</th>
+                        <td>{{ request.completed_by.get_full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>تاريخ الاستلام:</th>
+                        <td>{{ request.completed_at|date }}</td>
+                    </tr>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- الأصناف المطلوبة -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">الأصناف المطلوبة</h5>
+        {% if can_edit %}
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+            <i class="fas fa-plus"></i> إضافة صنف
+        </button>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الصنف</th>
+                        <th>الكمية</th>
+                        <th>سعر الوحدة</th>
+                        <th>الإجمالي</th>
+                        {% if can_edit %}
+                        <th>الإجراءات</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in request.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'inventory:item_detail' item.item.pk %}">
+                                {{ item.item.name }}
+                            </a>
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ item.unit_price }}</td>
+                        <td>{{ item.total }}</td>
+                        {% if can_edit %}
+                        <td>
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editItemModal{{ item.pk }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ item.pk }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if can_edit %}6{% else %}5{% endif %}" class="text-center">
+                            لا توجد أصناف مضافة
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-primary">
+                        <th colspan="4" class="text-end">الإجمالي الكلي:</th>
+                        <th>{{ total }}</th>
+                        {% if can_edit %}
+                        <th></th>
+                        {% endif %}
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if can_edit %}
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'inventory:purchase_request_add_item' request.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة صنف</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="item" class="form-label">الصنف</label>
+                        <select name="item" id="item" class="form-select" required>
+                            <option value="">اختر الصنف</option>
+                            {% for item in items %}
+                            <option value="{{ item.pk }}">{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">الكمية</label>
+                        <input type="number" name="quantity" id="quantity" class="form-control" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="unit_price" class="form-label">سعر الوحدة</label>
+                        <input type="number" name="unit_price" id="unit_price" class="form-control" min="0" step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                هل أنت متأكد من حذف طلب الشراء رقم "{{ request.number }}"؟
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'inventory:purchase_request_delete' request.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Reject Modal -->
+{% if can_approve and request.status == 'draft' %}
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <div class="modal-header">
+                    <h5 class="modal-title">رفض طلب الشراء</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">سبب الرفض</label>
+                        <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">رفض</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

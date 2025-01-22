@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير الموارد البشرية{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير الموارد البشرية</h1>
+                    <p class="text-muted">عرض وتحليل بيانات الموظفين</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الموظفين</h5>
+                    <h2 class="mb-0">{{ total_employees }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الموظفين النشطين</h5>
+                    <h2 class="mb-0">{{ active_employees }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">في إجازة حالياً</h5>
+                    <h2 class="mb-0">{{ current_leaves }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">حاضرون اليوم</h5>
+                    <h2 class="mb-0">{{ present_today }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات الحضور والغياب -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">إحصائيات الحضور اليوم</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع نوع التوظيف</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="employmentTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل الحضور والغياب -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تفاصيل الحضور والغياب اليوم</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الحالة</th>
+                                    <th>العدد</th>
+                                    <th>النسبة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-success">حاضر</span>
+                                    </td>
+                                    <td>{{ present_today }}</td>
+                                    <td>{{ present_today|percentage:total_employees }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-danger">غائب</span>
+                                    </td>
+                                    <td>{{ absent_today }}</td>
+                                    <td>{{ absent_today|percentage:total_employees }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-warning">متأخر</span>
+                                    </td>
+                                    <td>{{ late_today }}</td>
+                                    <td>{{ late_today|percentage:total_employees }}%</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">في إجازة</span>
+                                    </td>
+                                    <td>{{ current_leaves }}</td>
+                                    <td>{{ current_leaves|percentage:total_employees }}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // مخطط الحضور
+    var attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'pie',
+        data: {
+            labels: ['حاضر', 'غائب', 'متأخر', 'في إجازة'],
+            datasets: [{
+                data: [
+                    {{ present_today }},
+                    {{ absent_today }},
+                    {{ late_today }},
+                    {{ current_leaves }}
+                ],
+                backgroundColor: [
+                    '#28a745',  // حاضر
+                    '#dc3545',  // غائب
+                    '#ffc107',  // متأخر
+                    '#17a2b8'   // في إجازة
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // مخطط نوع التوظيف
+    var employmentTypeCtx = document.getElementById('employmentTypeChart').getContext('2d');
+    new Chart(employmentTypeCtx, {
+        type: 'pie',
+        data: {
+            labels: ['دوام كامل', 'دوام جزئي', 'متعاقد', 'مؤقت'],
+            datasets: [{
+                data: [
+                    {{ employment_type_counts.full_time }},
+                    {{ employment_type_counts.part_time }},
+                    {{ employment_type_counts.contractor }},
+                    {{ employment_type_counts.temporary }}
+                ],
+                backgroundColor: [
+                    '#007bff',  // دوام كامل
+                    '#6610f2',  // دوام جزئي
+                    '#6f42c1',  // متعاقد
+                    '#e83e8c'   // مؤقت
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ department.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{ department.name }}</h2>
+            <p class="text-muted">كود القسم: {{ department.code }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.hr.change_department %}
+            <a href="{% url 'hr:department_update' department.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> تعديل
+            </a>
+            {% endif %}
+            {% if perms.hr.delete_department %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash"></i> حذف
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- معلومات القسم -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معلومات القسم</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">مدير القسم</dt>
+                        <dd class="col-sm-8">
+                            {% if department.manager %}
+                                {{ department.manager.get_full_name }}
+                            {% else %}
+                                <span class="text-muted">غير محدد</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">تاريخ الإنشاء</dt>
+                        <dd class="col-sm-8">{{ department.created_at|date }}</dd>
+
+                        <dt class="col-sm-4">آخر تحديث</dt>
+                        <dd class="col-sm-8">{{ department.updated_at|date }}</dd>
+
+                        <dt class="col-sm-4">الوصف</dt>
+                        <dd class="col-sm-8">
+                            {% if department.description %}
+                                {{ department.description|linebreaks }}
+                            {% else %}
+                                <span class="text-muted">لا يوجد وصف</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- الوظائف في القسم -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">الوظائف</h5>
+                    {% if perms.hr.add_position %}
+                    <a href="{% url 'hr:position_create' %}?department={{ department.pk }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> إضافة وظيفة
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>المسمى الوظيفي</th>
+                                    <th>عدد الموظفين</th>
+                                    <th>الحد الأدنى للراتب</th>
+                                    <th>الحد الأقصى للراتب</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for position in department.positions.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'hr:position_detail' position.pk %}">
+                                            {{ position.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ position.employees.count }}</td>
+                                    <td>{{ position.salary_range_min }}</td>
+                                    <td>{{ position.salary_range_max }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'hr:position_detail' position.pk %}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if perms.hr.change_position %}
+                                            <a href="{% url 'hr:position_update' position.pk %}" 
+                                               class="btn btn-sm btn-warning" 
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">لا توجد وظائف في هذا القسم</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- الموظفون في القسم -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الموظفون</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>الوظيفة</th>
+                                    <th>تاريخ التعيين</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for position in department.positions.all %}
+                                {% for employee in position.employees.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'hr:employee_detail' employee.pk %}">
+                                            {{ employee.user.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ position.title }}</td>
+                                    <td>{{ employee.hire_date|date }}</td>
+                                    <td>
+                                        {% if employee.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'hr:employee_detail' employee.pk %}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if perms.hr.change_employeeprofile %}
+                                            <a href="{% url 'hr:employee_update' employee.pk %}" 
+                                               class="btn btn-sm btn-warning" 
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">لا يوجد موظفون في هذا القسم</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if perms.hr.delete_department %}
+<!-- Modal تأكيد الحذف -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف قسم "{{ department.name }}"؟</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    تحذير: سيؤدي حذف القسم إلى حذف جميع الوظائف المرتبطة به.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'hr:department_delete' department.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تفعيل tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

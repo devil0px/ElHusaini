@@ -1,0 +1,125 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}التنبيهات{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>التنبيهات</h2>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="btn-group">
+                <a href="?status=active{% if search_query %}&search={{ search_query }}{% endif %}" 
+                   class="btn btn-outline-primary {% if status == 'active' %}active{% endif %}">
+                    التنبيهات النشطة
+                </a>
+                <a href="?status=resolved{% if search_query %}&search={{ search_query }}{% endif %}" 
+                   class="btn btn-outline-primary {% if status == 'resolved' %}active{% endif %}">
+                    التنبيهات المحلولة
+                </a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <form method="get" class="form-inline">
+                <div class="input-group">
+                    <input type="hidden" name="status" value="{{ status }}">
+                    <input type="text" name="search" class="form-control" placeholder="بحث..." value="{{ search_query }}">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts List -->
+    <div class="row">
+        <div class="col">
+            <div class="list-group">
+                {% for alert in alerts %}
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <h5 class="mb-1">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            {{ alert.get_alert_type_display }}
+                        </h5>
+                        <small>{{ alert.created_at|timesince }}</small>
+                    </div>
+                    <p class="mb-1">{{ alert.message }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small>
+                            الصنف: 
+                            <a href="{% url 'inventory:item-detail' alert.item.id %}">{{ alert.item.name }}</a>
+                        </small>
+                        {% if alert.status == 'active' %}
+                        <form method="post" action="{% url 'inventory:alert-resolve' alert.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fas fa-check"></i> حل
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="badge bg-success">تم الحل</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="list-group-item text-center">
+                    {% if status == 'active' %}
+                    لا توجد تنبيهات نشطة
+                    {% else %}
+                    لا توجد تنبيهات محلولة
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="row mt-4">
+        <div class="col">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            السابق
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}&status={{ status }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            التالي
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

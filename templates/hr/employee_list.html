@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}قائمة الموظفين{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">قائمة الموظفين</h1>
+                    <p class="text-muted">إدارة وعرض بيانات الموظفين</p>
+                </div>
+                <div>
+                    <a href="{% url 'hr:employee_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إضافة موظف جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر البحث -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="name" class="form-label">الاسم</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ request.GET.name }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="department" class="form-label">القسم</label>
+                            <select class="form-select" id="department" name="department">
+                                <option value="">اختر القسم</option>
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}" {% if request.GET.department == dept.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ dept.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">الحالة</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">اختر الحالة</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+                                <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'hr:employee_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> إعادة تعيين
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة الموظفين -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    {% if employee_list %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>الرقم الوظيفي</th>
+                                        <th>الاسم</th>
+                                        <th>القسم</th>
+                                        <th>المسمى الوظيفي</th>
+                                        <th>تاريخ التعيين</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for employee in employee_list %}
+                                        <tr>
+                                            <td>{{ employee.employee_id }}</td>
+                                            <td>{{ employee.get_full_name }}</td>
+                                            <td>{{ employee.department.name }}</td>
+                                            <td>{{ employee.job_title }}</td>
+                                            <td>{{ employee.hire_date|date:"Y-m-d" }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if employee.is_active %}success{% else %}danger{% endif %}">
+                                                    {% if employee.is_active %}نشط{% else %}غير نشط{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'hr:employee_detail' employee.pk %}" class="btn btn-sm btn-info" title="عرض">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'hr:employee_update' employee.pk %}" class="btn btn-sm btn-warning" title="تعديل">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'hr:employee_delete' employee.pk %}" class="btn btn-sm btn-danger" title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- الترقيم -->
+                        {% if is_paginated %}
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1">&laquo; الأول</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">الأخير &raquo;</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="lead">لا يوجد موظفين حالياً</p>
+                            <a href="{% url 'hr:employee_create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة موظف جديد
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

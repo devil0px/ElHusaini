@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}التقرير التفصيلي{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css">
+<style>
+    .filters-section {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .summary-card {
+        transition: all 0.3s;
+    }
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>التقرير التفصيلي</h2>
+        </div>
+    </div>
+
+    <!-- فلاتر التقرير -->
+    <div class="filters-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="report_type" class="form-label">نوع التقرير</label>
+                <select name="report_type" id="report_type" class="form-select">
+                    <option value="financial" {% if request.GET.report_type == 'financial' %}selected{% endif %}>تقرير مالي</option>
+                    <option value="projects" {% if request.GET.report_type == 'projects' %}selected{% endif %}>تقرير المشاريع</option>
+                    <option value="clients" {% if request.GET.report_type == 'clients' %}selected{% endif %}>تقرير العملاء</option>
+                    <option value="resources" {% if request.GET.report_type == 'resources' %}selected{% endif %}>تقرير الموارد</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">من تاريخ</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" 
+                       value="{{ request.GET.start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">إلى تاريخ</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" 
+                       value="{{ request.GET.end_date }}">
+            </div>
+            <div class="col-md-3">
+                <label for="department" class="form-label">القسم</label>
+                <select name="department" id="department" class="form-select">
+                    <option value="">الكل</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if request.GET.department|add:"0" == dept.id %}selected{% endif %}>
+                        {{ dept.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> تصفية
+                </button>
+                <a href="{% url 'reports:detailed_report' %}" class="btn btn-secondary">
+                    <i class="fas fa-undo"></i> إعادة تعيين
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- ملخص التقرير -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الإيرادات</h5>
+                    <h3 class="text-primary">{{ total_revenue }} ريال</h3>
+                    <p class="mb-0">
+                        {% if revenue_change > 0 %}
+                        <span class="text-success">
+                            <i class="fas fa-arrow-up"></i> {{ revenue_change }}%
+                        </span>
+                        {% else %}
+                        <span class="text-danger">
+                            <i class="fas fa-arrow-down"></i> {{ revenue_change }}%
+                        </span>
+                        {% endif %}
+                        مقارنة بالفترة السابقة
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <h5 class="card-title">المشاريع المنجزة</h5>
+                    <h3 class="text-success">{{ completed_projects }}</h3>
+                    <p class="mb-0">من إجمالي {{ total_projects }} مشروع</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <h5 class="card-title">متوسط مدة التنفيذ</h5>
+                    <h3 class="text-info">{{ avg_completion_time }} يوم</h3>
+                    <p class="mb-0">للمشاريع المكتملة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <h5 class="card-title">معدل رضا العملاء</h5>
+                    <h3 class="text-warning">{{ client_satisfaction }}%</h3>
+                    <p class="mb-0">بناءً على {{ total_reviews }} تقييم</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول البيانات التفصيلية -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">البيانات التفصيلية</h5>
+                </div>
+                <div class="col text-end">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary btn-sm" id="copyBtn">
+                            <i class="fas fa-copy"></i> نسخ
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" id="excelBtn">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" id="pdfBtn">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                        <button type="button" class="btn btn-info btn-sm" id="printBtn">
+                            <i class="fas fa-print"></i> طباعة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="reportTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            {% if request.GET.report_type == 'financial' %}
+                            <th>التاريخ</th>
+                            <th>المشروع</th>
+                            <th>العميل</th>
+                            <th>نوع المعاملة</th>
+                            <th>المبلغ</th>
+                            <th>الحالة</th>
+                            {% elif request.GET.report_type == 'projects' %}
+                            <th>المشروع</th>
+                            <th>العميل</th>
+                            <th>تاريخ البدء</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>المدة (يوم)</th>
+                            <th>نسبة الإنجاز</th>
+                            <th>القيمة</th>
+                            <th>الحالة</th>
+                            {% elif request.GET.report_type == 'clients' %}
+                            <th>العميل</th>
+                            <th>عدد المشاريع</th>
+                            <th>المشاريع المكتملة</th>
+                            <th>إجمالي القيمة</th>
+                            <th>المدفوعات</th>
+                            <th>المتبقي</th>
+                            {% elif request.GET.report_type == 'resources' %}
+                            <th>المورد</th>
+                            <th>القسم</th>
+                            <th>عدد المشاريع</th>
+                            <th>ساعات العمل</th>
+                            <th>التكلفة</th>
+                            <th>الإنتاجية</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in report_data %}
+                        <tr>
+                            {% if request.GET.report_type == 'financial' %}
+                            <td>{{ item.date|date }}</td>
+                            <td>{{ item.project.name }}</td>
+                            <td>{{ item.client.name }}</td>
+                            <td>{{ item.transaction_type }}</td>
+                            <td>{{ item.amount }} ريال</td>
+                            <td>
+                                <span class="badge bg-{{ item.status_color }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            {% elif request.GET.report_type == 'projects' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.client.name }}</td>
+                            <td>{{ item.start_date|date }}</td>
+                            <td>{{ item.end_date|date }}</td>
+                            <td>{{ item.duration }}</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar bg-{{ item.progress_color }}" 
+                                         role="progressbar" 
+                                         style="width: {{ item.progress }}%">
+                                        {{ item.progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ item.value }} ريال</td>
+                            <td>
+                                <span class="badge bg-{{ item.status_color }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            {% elif request.GET.report_type == 'clients' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.total_projects }}</td>
+                            <td>{{ item.completed_projects }}</td>
+                            <td>{{ item.total_value }} ريال</td>
+                            <td>{{ item.payments }} ريال</td>
+                            <td>{{ item.remaining }} ريال</td>
+                            {% elif request.GET.report_type == 'resources' %}
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.department }}</td>
+                            <td>{{ item.projects_count }}</td>
+                            <td>{{ item.work_hours }}</td>
+                            <td>{{ item.cost }} ريال</td>
+                            <td>{{ item.productivity }}%</td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // تحسين قوائم الاختيار
+        $('#report_type, #department').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر...',
+            allowClear: true
+        });
+
+        // تهيئة جدول البيانات
+        var table = $('#reportTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/ar.json'
+            },
+            dom: 'Bfrtip',
+            buttons: [
+                {
+                    extend: 'copy',
+                    text: '<i class="fas fa-copy"></i>',
+                    className: 'btn btn-primary btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="fas fa-file-excel"></i>',
+                    className: 'btn btn-success btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="fas fa-file-pdf"></i>',
+                    className: 'btn btn-danger btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print"></i>',
+                    className: 'btn btn-info btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                }
+            ],
+            pageLength: 25,
+            order: [[0, 'desc']],
+            responsive: true
+        });
+
+        // ربط أزرار التصدير بأزرار DataTables
+        $('#copyBtn').on('click', function() {
+            $('.buttons-copy').click();
+        });
+        $('#excelBtn').on('click', function() {
+            $('.buttons-excel').click();
+        });
+        $('#pdfBtn').on('click', function() {
+            $('.buttons-pdf').click();
+        });
+        $('#printBtn').on('click', function() {
+            $('.buttons-print').click();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير المرتبات{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير المرتبات</h1>
+                    <p class="text-muted">عرض وتحليل بيانات المرتبات</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المرتبات</h5>
+                    <h2 class="mb-0">{{ total_salaries|floatformat:2 }}</h2>
+                    <small>ريال سعودي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي البدلات والمكافآت</h5>
+                    <h2 class="mb-0">{{ total_bonuses|floatformat:2 }}</h2>
+                    <small>ريال سعودي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الخصومات</h5>
+                    <h2 class="mb-0">{{ total_deductions|floatformat:2 }}</h2>
+                    <small>ريال سعودي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">متوسط الراتب</h5>
+                    <h2 class="mb-0">{{ average_salary|floatformat:2 }}</h2>
+                    <small>ريال سعودي</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تحليل المرتبات الشهري</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل المرتبات -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">سجل المرتبات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الموظف</th>
+                                    <th>السنة</th>
+                                    <th>الشهر</th>
+                                    <th>الراتب الأساسي</th>
+                                    <th>البدلات والمكافآت</th>
+                                    <th>الخصومات</th>
+                                    <th>صافي الراتب</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payroll in payrolls %}
+                                    <tr>
+                                        <td>{{ payroll.employee.user.get_full_name }}</td>
+                                        <td>{{ payroll.year }}</td>
+                                        <td>{{ payroll.get_month_display }}</td>
+                                        <td>{{ payroll.basic_salary|floatformat:2 }}</td>
+                                        <td>{{ payroll.bonuses|add:payroll.overtime|floatformat:2 }}</td>
+                                        <td>{{ payroll.deductions|floatformat:2 }}</td>
+                                        <td>{{ payroll.net_salary|floatformat:2 }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">لا توجد مرتبات في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // مخطط المرتبات الشهري
+    var monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ monthly_labels|safe }},
+            datasets: [
+                {
+                    label: 'صافي الراتب',
+                    data: {{ monthly_totals|safe }},
+                    backgroundColor: '#007bff',
+                    borderColor: '#0056b3',
+                    borderWidth: 1
+                },
+                {
+                    label: 'البدلات والمكافآت',
+                    data: {{ monthly_bonuses|safe }},
+                    backgroundColor: '#28a745',
+                    borderColor: '#1e7e34',
+                    borderWidth: 1
+                },
+                {
+                    label: 'الخصومات',
+                    data: {{ monthly_deductions|safe }},
+                    backgroundColor: '#dc3545',
+                    borderColor: '#bd2130',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' ريال';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

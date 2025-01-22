@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير جرد المخزون{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير جرد المخزون</h1>
+                    <p class="text-muted">عرض نتائج جرد المخزون</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص الجرد -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي عمليات الجرد</h5>
+                    <h2 class="mb-0">{{ total_counts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">العناصر المطابقة</h5>
+                    <h2 class="mb-0">{{ matching_items }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">العناصر الزائدة</h5>
+                    <h2 class="mb-0">{{ surplus_items }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">العناصر الناقصة</h5>
+                    <h2 class="mb-0">{{ shortage_items }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نتائج الجرد -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">نتائج الجرد</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>تاريخ الجرد</th>
+                                    <th>الصنف</th>
+                                    <th>الكمية في النظام</th>
+                                    <th>الكمية الفعلية</th>
+                                    <th>الفرق</th>
+                                    <th>النسبة</th>
+                                    <th>الحالة</th>
+                                    <th>تم الجرد بواسطة</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for count in stock_counts %}
+                                    <tr>
+                                        <td>{{ count.count_date|date:"Y-m-d" }}</td>
+                                        <td>{{ count.item.name }}</td>
+                                        <td>{{ count.system_quantity }}</td>
+                                        <td>{{ count.physical_quantity }}</td>
+                                        <td>
+                                            <span class="{% if count.difference > 0 %}text-success{% elif count.difference < 0 %}text-danger{% endif %}">
+                                                {{ count.difference|floatformat:2 }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if count.system_quantity %}
+                                                {{ count.difference_percentage|floatformat:2 }}%
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if count.difference == 0 %}success{% elif count.difference > 0 %}info{% else %}danger{% endif %}">
+                                                {% if count.difference == 0 %}
+                                                    مطابق
+                                                {% elif count.difference > 0 %}
+                                                    زيادة
+                                                {% else %}
+                                                    نقص
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>{{ count.counted_by.get_full_name }}</td>
+                                        <td>{{ count.notes|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="9" class="text-center">لا توجد عمليات جرد في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- رسم بياني للفروقات -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تحليل فروقات الجرد</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="stockDifferenceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge {
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // رسم بياني للفروقات
+    var ctx = document.getElementById('stockDifferenceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for count in stock_counts %}'{{ count.item.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'الفرق في الكمية',
+                data: [{% for count in stock_counts %}{{ count.difference }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [{% for count in stock_counts %}
+                    '{% if count.difference > 0 %}#17a2b8{% elif count.difference < 0 %}#dc3545{% else %}#28a745{% endif %}'{% if not forloop.last %}, {% endif %}
+                {% endfor %}],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

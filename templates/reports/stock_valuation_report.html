@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير تقييم المخزون{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير تقييم المخزون</h1>
+                    <p class="text-muted">عرض قيمة المخزون الحالي وتحليل التكاليف</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التصنيف -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="item_type" class="form-label">تصنيف الصنف</label>
+                            <select class="form-select" id="item_type" name="item_type">
+                                <option value="">الكل</option>
+                                {% for type_choice in item_types %}
+                                    <option value="{{ type_choice.0 }}" {% if item_type == type_choice.0 %}selected{% endif %}>
+                                        {{ type_choice.1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص التقييم -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الأصناف</h5>
+                    <h2 class="mb-0">{{ total_items }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي الكميات</h5>
+                    <h2 class="mb-0">{{ total_quantity }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">القيمة الإجمالية</h5>
+                    <h2 class="mb-0">{{ total_value|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">متوسط القيمة</h5>
+                    <h2 class="mb-0">{{ average_value|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل التقييم -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تفاصيل تقييم المخزون</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>الصنف</th>
+                                    <th>التصنيف</th>
+                                    <th>الكمية الحالية</th>
+                                    <th>متوسط سعر الوحدة</th>
+                                    <th>القيمة الإجمالية</th>
+                                    <th>الحد الأدنى</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                    <tr>
+                                        <td>{{ item.name }}</td>
+                                        <td>{{ item.get_type_display }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>{{ item.average_unit_price|floatformat:2 }}</td>
+                                        <td>{{ item.total_value|floatformat:2 }}</td>
+                                        <td>{{ item.minimum_quantity }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if item.quantity == 0 %}danger{% elif item.quantity <= item.minimum_quantity %}warning{% else %}success{% endif %}">
+                                                {% if item.quantity == 0 %}
+                                                    نفذ المخزون
+                                                {% elif item.quantity <= item.minimum_quantity %}
+                                                    منخفض
+                                                {% else %}
+                                                    متوفر
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">لا توجد أصناف في المخزون</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحليل القيمة حسب التصنيف -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع القيمة حسب التصنيف</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="valueByTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع الكميات حسب التصنيف</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="quantityByTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge {
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // بيانات التصنيف
+    var types = [{% for type_data in type_analysis %}'{{ type_data.type_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+    var values = [{% for type_data in type_analysis %}{{ type_data.total_value }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+    var quantities = [{% for type_data in type_analysis %}{{ type_data.total_quantity }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+    // رسم بياني للقيمة حسب التصنيف
+    var valueCtx = document.getElementById('valueByTypeChart').getContext('2d');
+    new Chart(valueCtx, {
+        type: 'pie',
+        data: {
+            labels: types,
+            datasets: [{
+                data: values,
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // رسم بياني للكميات حسب التصنيف
+    var quantityCtx = document.getElementById('quantityByTypeChart').getContext('2d');
+    new Chart(quantityCtx, {
+        type: 'pie',
+        data: {
+            labels: types,
+            datasets: [{
+                data: quantities,
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

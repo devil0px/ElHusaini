@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير حالة المشاريع{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير حالة المشاريع</h1>
+                    <p class="text-muted">عرض وتحليل حالة المشاريع وتقدمها</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المشاريع</h5>
+                    <h2 class="mb-0">{{ total_projects }}</h2>
+                    <small>في الفترة المحددة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">المشاريع المكتملة</h5>
+                    <h2 class="mb-0">{{ completed_projects }}</h2>
+                    <small>{{ completed_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">المشاريع الجارية</h5>
+                    <h2 class="mb-0">{{ in_progress_projects }}</h2>
+                    <small>{{ in_progress_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">المشاريع المتأخرة</h5>
+                    <h2 class="mb-0">{{ delayed_projects }}</h2>
+                    <small>{{ delayed_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع حالة المشاريع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">نسبة إنجاز المشاريع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="projectProgressChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل المشاريع -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">قائمة المشاريع</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>اسم المشروع</th>
+                                    <th>مدير المشروع</th>
+                                    <th>تاريخ البدء</th>
+                                    <th>تاريخ الانتهاء</th>
+                                    <th>الحالة</th>
+                                    <th>نسبة الإنجاز</th>
+                                    <th>الميزانية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in projects %}
+                                    <tr>
+                                        <td>{{ project.name }}</td>
+                                        <td>{{ project.project_manager.employee.user.get_full_name }}</td>
+                                        <td>{{ project.start_date|date:"Y-m-d" }}</td>
+                                        <td>{{ project.end_date|date:"Y-m-d" }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if project.status == 'completed' %}success{% elif project.status == 'in_progress' %}warning{% elif project.status == 'delayed' %}danger{% else %}secondary{% endif %}">
+                                                {{ project.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-{% if project.progress >= 75 %}success{% elif project.progress >= 50 %}info{% elif project.progress >= 25 %}warning{% else %}danger{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ project.progress }}%"
+                                                     aria-valuenow="{{ project.progress }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">{{ project.progress }}%</div>
+                                            </div>
+                                        </td>
+                                        <td>{{ project.budget|floatformat:2 }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">لا توجد مشاريع في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // مخطط حالة المشاريع
+    var statusCtx = document.getElementById('projectStatusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['مكتمل', 'قيد التنفيذ', 'متأخر', 'معلق'],
+            datasets: [{
+                data: [
+                    {{ completed_projects }},
+                    {{ in_progress_projects }},
+                    {{ delayed_projects }},
+                    {{ on_hold_projects }}
+                ],
+                backgroundColor: [
+                    '#28a745',  // مكتمل
+                    '#ffc107',  // قيد التنفيذ
+                    '#dc3545',  // متأخر
+                    '#6c757d'   // معلق
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // مخطط نسبة الإنجاز
+    var progressCtx = document.getElementById('projectProgressChart').getContext('2d');
+    new Chart(progressCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ project_names|safe }},
+            datasets: [{
+                label: 'نسبة الإنجاز',
+                data: {{ project_progress|safe }},
+                backgroundColor: {{ project_progress_colors|safe }},
+                borderColor: {{ project_progress_borders|safe }},
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

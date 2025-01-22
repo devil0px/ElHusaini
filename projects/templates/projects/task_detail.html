@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Task Details -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">تفاصيل المهمة</h4>
+                <div>
+                    {% if user == task.assigned_to or user == task.project.project_manager %}
+                        <a href="{% url 'projects:task-update' task.project.id task.id %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-edit"></i> تعديل
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'projects:project-detail' task.project.id %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left"></i> العودة للمشروع
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">{{ task.title }}</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <i class="fas fa-project-diagram me-2"></i>المشروع: 
+                            <a href="{% url 'projects:project-detail' task.project.id %}">{{ task.project.name }}</a>
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-user me-2"></i>المسؤول: {{ task.assigned_to.get_full_name }}
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-calendar me-2"></i>تاريخ التسليم: {{ task.due_date|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <i class="fas fa-flag me-2"></i>الأولوية: 
+                            <span class="badge bg-{{ task.get_priority_color }}">
+                                {{ task.get_priority_display }}
+                            </span>
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-info-circle me-2"></i>الحالة: 
+                            <span class="badge bg-{{ task.get_status_color }}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </p>
+                        <p class="mb-2">
+                            <i class="fas fa-clock me-2"></i>الساعات المقدرة: {{ task.estimated_hours|default:"غير محدد" }}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>الوصف:</h6>
+                    <p>{{ task.description|linebreaks }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <h6>التقدم:</h6>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ task.progress }}%;">
+                            {{ task.progress }}%
+                        </div>
+                    </div>
+                </div>
+
+                {% if user == task.assigned_to %}
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6>تحديث التقدم:</h6>
+                            <form id="updateProgressForm" class="row g-3">
+                                {% csrf_token %}
+                                <div class="col-md-6">
+                                    <input type="number" class="form-control" name="progress" 
+                                           value="{{ task.progress }}" min="0" max="100">
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-primary">تحديث</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">التعليقات</h5>
+            </div>
+            <div class="card-body">
+                <form id="addCommentForm" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="أضف تعليقاً..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">إرسال</button>
+                </form>
+
+                <div id="commentsList">
+                    {% for comment in task.comments.all %}
+                        <div class="d-flex mb-3">
+                            <img src="{{ comment.user.profile.avatar.url|default:'/static/images/default-avatar.png' }}" 
+                                 alt="{{ comment.user.get_full_name }}" 
+                                 class="rounded-circle me-2"
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                            <div class="flex-grow-1">
+                                <div class="bg-light rounded p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>{{ comment.user.get_full_name }}</strong>
+                                        <small class="text-muted">{{ comment.created_at|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    <p class="mb-0">{{ comment.content }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-center text-muted">لا توجد تعليقات</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Activity Log -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">سجل النشاط</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for activity in task.activities.all %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">{{ activity.get_action_display }}</h6>
+                                <p class="mb-0">{{ activity.description }}</p>
+                                <small class="text-muted">
+                                    {{ activity.created_at|date:"d/m/Y H:i" }} - {{ activity.user.get_full_name }}
+                                </small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-center text-muted">لا يوجد نشاط</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">المرفقات</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadAttachmentModal">
+                    <i class="fas fa-upload"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                {% for attachment in task.attachments.all %}
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-file fa-2x me-2"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ attachment.filename }}</h6>
+                            <small class="text-muted">
+                                {{ attachment.created_at|date:"d/m/Y" }} - {{ attachment.file.size|filesizeformat }}
+                            </small>
+                        </div>
+                        <div class="btn-group">
+                            <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% if user == task.assigned_to or user == task.project.project_manager %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteAttachment({{ attachment.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-center text-muted">لا توجد مرفقات</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Attachment Modal -->
+<div class="modal fade" id="uploadAttachmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">رفع مرفق</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadAttachmentForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">الملف</label>
+                        <input type="file" class="form-control" name="file" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="uploadAttachment()">رفع</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #ddd;
+    left: 15px;
+    margin-left: -1px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    margin-left: 40px;
+}
+
+.timeline-marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    left: -34px;
+    top: 5px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateProgress() {
+    const form = document.getElementById('updateProgressForm');
+    const formData = new FormData(form);
+    
+    fetch(`/projects/{{ task.project.id }}/tasks/{{ task.id }}/progress/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function addComment() {
+    const form = document.getElementById('addCommentForm');
+    const formData = new FormData(form);
+    
+    fetch(`/projects/{{ task.project.id }}/tasks/{{ task.id }}/comments/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function uploadAttachment() {
+    const form = document.getElementById('uploadAttachmentForm');
+    const formData = new FormData(form);
+    
+    fetch(`/projects/{{ task.project.id }}/tasks/{{ task.id }}/attachments/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function deleteAttachment(attachmentId) {
+    if (confirm('هل أنت متأكد من حذف هذا المرفق؟')) {
+        fetch(`/projects/{{ task.project.id }}/tasks/{{ task.id }}/attachments/${attachmentId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('حدث خطأ أثناء حذف المرفق');
+            }
+        });
+    }
+}
+
+document.getElementById('updateProgressForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    updateProgress();
+});
+
+document.getElementById('addCommentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    addComment();
+});
+</script>
+{% endblock %}

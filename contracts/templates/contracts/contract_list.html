@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}العقود{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>العقود</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.contracts.add_contract %}
+            <a href="{% url 'contracts:contract_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة عقد جديد
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">بحث</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ request.GET.search }}" 
+                           placeholder="رقم العقد، اسم المشروع...">
+                </div>
+                <div class="col-md-3">
+                    <label for="client" class="form-label">العميل</label>
+                    <select name="client" id="client" class="form-select">
+                        <option value="">الكل</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}" 
+                                {% if request.GET.client|add:"0" == client.id %}selected{% endif %}>
+                            {{ client.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">حالة العقد</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>مسودة</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>قيد المراجعة</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>ساري</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="date_range" class="form-label">تاريخ العقد</label>
+                    <select name="date_range" id="date_range" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>اليوم</option>
+                        <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>هذا الأسبوع</option>
+                        <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>هذا الشهر</option>
+                        <option value="year" {% if request.GET.date_range == 'year' %}selected{% endif %}>هذا العام</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">بحث</button>
+                    <a href="{% url 'contracts:contract_list' %}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول العقود -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>رقم العقد</th>
+                            <th>المشروع</th>
+                            <th>العميل</th>
+                            <th>تاريخ البدء</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>القيمة</th>
+                            <th>المدفوعات</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contract in contracts %}
+                        <tr>
+                            <td>{{ contract.contract_number }}</td>
+                            <td>
+                                <a href="{% url 'projects:project_detail' contract.project.pk %}">
+                                    {{ contract.project.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'clients:client_detail' contract.client.pk %}">
+                                    {{ contract.client.name }}
+                                </a>
+                            </td>
+                            <td>{{ contract.start_date|date }}</td>
+                            <td>{{ contract.end_date|date }}</td>
+                            <td>{{ contract.value }} ريال</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    {% with percentage=contract.payments_percentage %}
+                                    <div class="progress-bar {% if percentage == 100 %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ percentage }}%"
+                                         aria-valuenow="{{ percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ percentage }}%
+                                    </div>
+                                    {% endwith %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if contract.status == 'draft' %}
+                                <span class="badge bg-secondary">مسودة</span>
+                                {% elif contract.status == 'pending' %}
+                                <span class="badge bg-warning">قيد المراجعة</span>
+                                {% elif contract.status == 'active' %}
+                                <span class="badge bg-success">ساري</span>
+                                {% elif contract.status == 'completed' %}
+                                <span class="badge bg-primary">مكتمل</span>
+                                {% elif contract.status == 'cancelled' %}
+                                <span class="badge bg-danger">ملغي</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'contracts:contract_detail' contract.pk %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    {% if perms.contracts.change_contract %}
+                                    <a href="{% url 'contracts:contract_update' contract.pk %}" 
+                                       class="btn btn-sm btn-warning" 
+                                       title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if perms.contracts.delete_contract %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal{{ contract.pk }}"
+                                            title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+
+                                    <a href="{% url 'contracts:contract_pdf' contract.pk %}" 
+                                       class="btn btn-sm btn-secondary" 
+                                       title="تحميل PDF"
+                                       target="_blank">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </div>
+                                
+                                {% if perms.contracts.delete_contract %}
+                                <!-- Modal تأكيد الحذف -->
+                                <div class="modal fade" id="deleteModal{{ contract.pk }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">تأكيد الحذف</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>هل أنت متأكد من حذف العقد رقم "{{ contract.contract_number }}"؟</p>
+                                                {% if contract.payments.exists %}
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    تحذير: يوجد {{ contract.payments.count }} دفعة مرتبطة بهذا العقد.
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                <form action="{% url 'contracts:contract_delete' contract.pk %}" method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center">لا توجد عقود</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' '1' %}">
+                    الأول
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.previous_page_number %}">
+                    السابق
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' num %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.next_page_number %}">
+                    التالي
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.paginator.num_pages %}">
+                    الأخير
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تفعيل tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // تحسين قوائم الاختيار باستخدام Select2
+        $('#client, #status, #date_range').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر...',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

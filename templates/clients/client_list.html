@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}قائمة العملاء{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">قائمة العملاء</h1>
+                    <p class="text-muted">إدارة وعرض العملاء</p>
+                </div>
+                <div>
+                    <a href="{% url 'clients:client-create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إضافة عميل جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر البحث -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="name" class="form-label">اسم العميل</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ request.GET.name }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="phone" class="form-label">رقم الهاتف</label>
+                            <input type="text" class="form-control" id="phone" name="phone" value="{{ request.GET.phone }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="email" class="form-label">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ request.GET.email }}">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'clients:client-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> إعادة تعيين
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة العملاء -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    {% if client_list %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>الكود</th>
+                                        <th>الاسم</th>
+                                        <th>رقم الهاتف</th>
+                                        <th>البريد الإلكتروني</th>
+                                        <th>العنوان</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for client in client_list %}
+                                        <tr>
+                                            <td>{{ client.code }}</td>
+                                            <td>{{ client.name }}</td>
+                                            <td>{{ client.phone }}</td>
+                                            <td>{{ client.email }}</td>
+                                            <td>{{ client.address|truncatechars:30 }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if client.is_active %}success{% else %}danger{% endif %}">
+                                                    {% if client.is_active %}نشط{% else %}غير نشط{% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'clients:client-detail' client.pk %}" class="btn btn-sm btn-info" title="عرض">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'clients:client-update' client.pk %}" class="btn btn-sm btn-warning" title="تعديل">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'clients:client-delete' client.pk %}" class="btn btn-sm btn-danger" title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- الترقيم -->
+                        {% if is_paginated %}
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=1 %}">&laquo; الأول</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.previous_page_number %}">السابق</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% url_replace page=num %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.next_page_number %}">التالي</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.paginator.num_pages %}">الأخير &raquo;</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="lead">لا يوجد عملاء حالياً</p>
+                            <a href="{% url 'clients:client-create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة عميل جديد
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}تعديل المشروع{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">تعديل المشروع</h4>
+                <a href="{% url 'projects:project-detail' project.id %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> العودة للمشروع
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">اسم المشروع</label>
+                            <input type="text" class="form-control" name="name" value="{{ project.name }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">اسم العميل</label>
+                            <input type="text" class="form-control" name="client_name" value="{{ project.client_name }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">وصف المشروع</label>
+                        <textarea class="form-control" name="description" rows="3">{{ project.description }}</textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ البداية</label>
+                            <input type="date" class="form-control" name="start_date" value="{{ project.start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ النهاية</label>
+                            <input type="date" class="form-control" name="end_date" value="{{ project.end_date|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الميزانية</label>
+                            <input type="number" class="form-control" name="budget" value="{{ project.budget }}" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الموقع</label>
+                            <input type="text" class="form-control" name="location" value="{{ project.location }}">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">حالة المشروع</label>
+                            <select class="form-select" name="status" required>
+                                <option value="planning" {% if project.status == 'planning' %}selected{% endif %}>التخطيط</option>
+                                <option value="in_progress" {% if project.status == 'in_progress' %}selected{% endif %}>قيد التنفيذ</option>
+                                <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                                <option value="on_hold" {% if project.status == 'on_hold' %}selected{% endif %}>معلق</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">نسبة الإنجاز</label>
+                            <input type="number" class="form-control" name="progress" value="{{ project.progress }}" min="0" max="100" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">أعضاء الفريق</label>
+                        <select class="form-select" name="team_members" multiple>
+                            {% for user in users %}
+                                <option value="{{ user.id }}" {% if user in project.team_members.all %}selected{% endif %}>
+                                    {{ user.get_full_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                        <a href="{% url 'projects:project-detail' project.id %}" class="btn btn-secondary">إلغاء</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // إضافة سكريبت للتحقق من التواريخ
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const startDate = new Date(document.querySelector('[name="start_date"]').value);
+        const endDate = new Date(document.querySelector('[name="end_date"]').value);
+        
+        if (endDate < startDate) {
+            e.preventDefault();
+            alert('تاريخ النهاية يجب أن يكون بعد تاريخ البداية');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}تفاصيل الصيانة{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>تفاصيل الصيانة</h2>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'inventory:maintenance-update' maintenance.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> تعديل
+                </a>
+                <a href="{% url 'inventory:maintenance-delete' maintenance.id %}" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> حذف
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معلومات أساسية</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">الصنف</dt>
+                        <dd class="col-sm-8">{{ maintenance.item.name }}</dd>
+
+                        <dt class="col-sm-4">نوع الصيانة</dt>
+                        <dd class="col-sm-8">{{ maintenance.get_maintenance_type_display }}</dd>
+
+                        <dt class="col-sm-4">التاريخ المجدول</dt>
+                        <dd class="col-sm-8">{{ maintenance.scheduled_date }}</dd>
+
+                        <dt class="col-sm-4">المزود</dt>
+                        <dd class="col-sm-8">{{ maintenance.provider.name|default:"-" }}</dd>
+
+                        <dt class="col-sm-4">التكلفة المقدرة</dt>
+                        <dd class="col-sm-8">{{ maintenance.estimated_cost }}</dd>
+
+                        <dt class="col-sm-4">الحالة</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{{ maintenance.status_color }}">
+                                {{ maintenance.get_status_display }}
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الوصف</h5>
+                </div>
+                <div class="card-body">
+                    {{ maintenance.description|linebreaks|default:"لا يوجد وصف" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">مهام الصيانة</h5>
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                        <i class="fas fa-plus"></i> إضافة مهمة
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الوصف</th>
+                                    <th>الملاحظات</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr>
+                                    <td>{{ task.description }}</td>
+                                    <td>{{ task.notes|default:"-" }}</td>
+                                    <td>
+                                        {% if task.is_completed %}
+                                        <span class="badge bg-success">مكتمل</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">قيد التنفيذ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-warning edit-task" data-task-id="{{ task.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger delete-task" data-task-id="{{ task.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">لا توجد مهام مضافة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة مهمة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTaskForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="description" class="form-label">الوصف</label>
+                        <textarea class="form-control" id="description" name="description" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">ملاحظات</label>
+                        <textarea class="form-control" id="notes" name="notes"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" form="addTaskForm" class="btn btn-primary">إضافة</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // يمكن إضافة JavaScript هنا للتعامل مع إضافة/تعديل/حذف المهام
+</script>
+{% endblock %}

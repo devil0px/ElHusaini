@@ -1,0 +1,97 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if form.instance.pk %}
+تعديل طلب الشراء - {{ form.instance.number }}
+{% else %}
+إنشاء طلب شراء جديد
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>
+            {% if form.instance.pk %}
+            تعديل طلب الشراء - {{ form.instance.number }}
+            {% else %}
+            إنشاء طلب شراء جديد
+            {% endif %}
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.supplier|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    {{ form.notes|as_crispy_field }}
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            {% if form.instance.pk %}
+                            <i class="fas fa-save"></i> حفظ التغييرات
+                            {% else %}
+                            <i class="fas fa-plus"></i> إنشاء طلب الشراء
+                            {% endif %}
+                        </button>
+                        <a href="{% url 'inventory:purchase-request-list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">تعليمات</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info"></i>
+                        اختر المورد من القائمة المنسدلة.
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info"></i>
+                        يمكنك إضافة ملاحظات إضافية للطلب.
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info"></i>
+                        بعد إنشاء الطلب، يمكنك إضافة الأصناف المطلوبة.
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        لا يمكن تعديل الطلب بعد الموافقة عليه.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث حقل الملاحظات ليكون أكبر
+    document.addEventListener('DOMContentLoaded', function() {
+        const notesField = document.getElementById('id_notes');
+        if (notesField) {
+            notesField.rows = 5;
+        }
+    });
+</script>
+{% endblock %}

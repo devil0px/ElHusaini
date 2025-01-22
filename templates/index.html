@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center mb-4">
+            <h1 class="display-4 mb-3">مرحباً بك في نظام إدارة موارد المؤسسة</h1>
+            <p class="lead">نظام متكامل لإدارة موارد مؤسستك بكفاءة عالية</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- الموظفين -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-primary bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-users fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">إدارة الموظفين</h5>
+                    <p class="card-text">إدارة شاملة لبيانات الموظفين، الإجازات، والرواتب</p>
+                    <a href="{% url 'hr:employee_list' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-circle-right"></i> إدارة الموظفين
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- المشاريع -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-success bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-project-diagram fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">إدارة المشاريع</h5>
+                    <p class="card-text">تتبع وإدارة المشاريع والمهام بكفاءة</p>
+                    <a href="{% url 'web_projects:project_list' %}" class="btn btn-success">
+                        <i class="fas fa-arrow-circle-right"></i> عرض المشاريع
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- المخزون -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-info bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-boxes fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">إدارة المخزون</h5>
+                    <p class="card-text">تتبع المخزون والمشتريات والموردين</p>
+                    <a href="{% url 'inventory:dashboard' %}" class="btn btn-info">
+                        <i class="fas fa-arrow-circle-right"></i> عرض المخزون
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-4">
+        <!-- العملاء -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-warning bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-users-cog fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">إدارة العملاء</h5>
+                    <p class="card-text">إدارة علاقات العملاء والمبيعات</p>
+                    <a href="{% url 'clients:client-list' %}" class="btn btn-warning">
+                        <i class="fas fa-arrow-circle-right"></i> عرض العملاء
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- العقود -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-danger bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-file-contract fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">إدارة العقود</h5>
+                    <p class="card-text">إدارة وتتبع العقود والاتفاقيات</p>
+                    <a href="{% url 'contracts:contract-list' %}" class="btn btn-danger">
+                        <i class="fas fa-arrow-circle-right"></i> عرض العقود
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- التقارير -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="feature-icon bg-secondary bg-gradient text-white rounded-circle mb-3">
+                        <i class="fas fa-chart-bar fa-2x p-3"></i>
+                    </div>
+                    <h5 class="card-title">التقارير</h5>
+                    <p class="card-text">تقارير وإحصائيات تفصيلية</p>
+                    <a href="{% url 'reports:report-list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-circle-right"></i> عرض التقارير
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn {
+    border-radius: 20px;
+    padding: 8px 20px;
+}
+
+.display-4 {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.lead {
+    color: #7f8c8d;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}لوحة التحكم والتقارير{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+<style>
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- عنوان الصفحة وأزرار التصدير -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>لوحة التحكم والتقارير</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-download"></i> تصدير التقرير
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{% url 'reports:export_pdf' %}">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{% url 'reports:export_excel' %}">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلاتر التقرير -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_range" class="form-label">الفترة الزمنية</label>
+                    <select name="date_range" id="date_range" class="form-select">
+                        <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>اليوم</option>
+                        <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>الأسبوع</option>
+                        <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>الشهر</option>
+                        <option value="quarter" {% if request.GET.date_range == 'quarter' %}selected{% endif %}>الربع</option>
+                        <option value="year" {% if request.GET.date_range == 'year' %}selected{% endif %}>السنة</option>
+                        <option value="custom" {% if request.GET.date_range == 'custom' %}selected{% endif %}>مخصص</option>
+                    </select>
+                </div>
+                <div class="col-md-3 custom-date" style="display: none;">
+                    <label for="start_date" class="form-label">من تاريخ</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" 
+                           value="{{ request.GET.start_date }}">
+                </div>
+                <div class="col-md-3 custom-date" style="display: none;">
+                    <label for="end_date" class="form-label">إلى تاريخ</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control" 
+                           value="{{ request.GET.end_date }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="department" class="form-label">القسم</label>
+                    <select name="department" id="department" class="form-select">
+                        <option value="">الكل</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if request.GET.department|add:"0" == dept.id %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">تحديث</button>
+                    <a href="{% url 'reports:dashboard' %}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- الإحصائيات العامة -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-money-bill-wave fa-3x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">إجمالي الإيرادات</h6>
+                            <h3 class="mb-0">{{ total_revenue }} ريال</h3>
+                            <small>{{ revenue_growth }}% نمو</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-project-diagram fa-3x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">المشاريع النشطة</h6>
+                            <h3 class="mb-0">{{ active_projects }}</h3>
+                            <small>{{ completed_projects }} مكتمل</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-users fa-3x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">العملاء النشطون</h6>
+                            <h3 class="mb-0">{{ active_clients }}</h3>
+                            <small>{{ new_clients }} عميل جديد</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-tasks fa-3x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">متوسط نسبة الإنجاز</h6>
+                            <h3 class="mb-0">{{ avg_progress }}%</h3>
+                            <small>{{ overdue_tasks }} مهمة متأخرة</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- الرسم البياني للإيرادات -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تحليل الإيرادات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- توزيع حالات المشاريع -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع المشاريع</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="projectsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- أداء الأقسام -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">أداء الأقسام</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="departmentsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- تحليل العملاء -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تحليل العملاء</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="clientsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول المشاريع المتأخرة -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">المشاريع المتأخرة</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>المشروع</th>
+                            <th>العميل</th>
+                            <th>تاريخ التسليم</th>
+                            <th>التأخير</th>
+                            <th>نسبة الإنجاز</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in delayed_projects_list %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'projects:project_detail' project.pk %}">
+                                    {{ project.name }}
+                                </a>
+                            </td>
+                            <td>{{ project.client.name }}</td>
+                            <td>{{ project.end_date|date }}</td>
+                            <td>{{ project.delay_days }} يوم</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar bg-danger" 
+                                         role="progressbar" 
+                                         style="width: {{ project.progress }}%">
+                                        {{ project.progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'projects:project_timeline' project.pk %}" 
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-clock"></i> الجدول الزمني
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">لا توجد مشاريع متأخرة</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // تحسين قوائم الاختيار
+        $('#date_range, #department').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر...',
+            allowClear: true
+        });
+
+        // إظهار/إخفاء حقول التاريخ المخصص
+        $('#date_range').change(function() {
+            if ($(this).val() === 'custom') {
+                $('.custom-date').show();
+            } else {
+                $('.custom-date').hide();
+            }
+        }).trigger('change');
+
+        // تهيئة الرسوم البيانية
+        // رسم بياني للإيرادات
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'line',
+            data: {
+                labels: {{ revenue_labels|safe }},
+                datasets: [{
+                    label: 'الإيرادات',
+                    data: {{ revenue_data }},
+                    borderColor: '#0d6efd',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+
+        // رسم بياني للمشاريع
+        new Chart(document.getElementById('projectsChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['قيد التنفيذ', 'مكتملة', 'متأخرة', 'ملغاة'],
+                datasets: [{
+                    data: {{ projects_distribution }},
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // رسم بياني لأداء الأقسام
+        new Chart(document.getElementById('departmentsChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ departments_labels|safe }},
+                datasets: [{
+                    label: 'نسبة الإنجاز',
+                    data: {{ departments_progress }},
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        // رسم بياني لتحليل العملاء
+        new Chart(document.getElementById('clientsChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ clients_labels|safe }},
+                datasets: [{
+                    label: 'عدد المشاريع',
+                    data: {{ clients_projects }},
+                    backgroundColor: '#198754'
+                }, {
+                    label: 'قيمة المشاريع',
+                    data: {{ clients_revenue }},
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

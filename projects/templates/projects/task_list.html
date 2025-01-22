@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+
+{% block title %}المهام{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>المهام</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        <i class="fas fa-plus"></i> مهمة جديدة
+    </button>
+</div>
+
+<!-- Task Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">المشروع</label>
+                <select class="form-select" name="project">
+                    <option value="">الكل</option>
+                    {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">الحالة</label>
+                <select class="form-select" name="status">
+                    <option value="">الكل</option>
+                    <option value="pending">معلقة</option>
+                    <option value="in_progress">قيد التنفيذ</option>
+                    <option value="completed">مكتملة</option>
+                    <option value="cancelled">ملغاة</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">الأولوية</label>
+                <select class="form-select" name="priority">
+                    <option value="">الكل</option>
+                    <option value="low">منخفضة</option>
+                    <option value="medium">متوسطة</option>
+                    <option value="high">عالية</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">المسؤول</label>
+                <select class="form-select" name="assigned_to">
+                    <option value="">الكل</option>
+                    {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary me-2">تطبيق</button>
+                <button type="reset" class="btn btn-secondary">إعادة تعيين</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tasks List -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>المهمة</th>
+                        <th>المشروع</th>
+                        <th>المسؤول</th>
+                        <th>تاريخ التسليم</th>
+                        <th>الأولوية</th>
+                        <th>الحالة</th>
+                        <th>التقدم</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'projects:task-detail' task.project.id task.id %}" class="text-decoration-none">
+                                    {{ task.title }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'projects:project-detail' task.project.id %}" class="text-decoration-none">
+                                    {{ task.project.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ task.assigned_to.profile.avatar.url|default:'/static/images/default-avatar.png' }}" 
+                                         alt="{{ task.assigned_to.get_full_name }}" 
+                                         class="rounded-circle me-2"
+                                         style="width: 30px; height: 30px; object-fit: cover;">
+                                    {{ task.assigned_to.get_full_name }}
+                                </div>
+                            </td>
+                            <td>{{ task.due_date|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge bg-{{ task.get_priority_color }}">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ task.get_status_color }}">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ task.progress }}%;">
+                                        {{ task.progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'projects:task-detail' task.project.id task.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if user == task.assigned_to or user == task.project.project_manager %}
+                                        <a href="{% url 'projects:task-update' task.project.id task.id %}" class="btn btn-sm btn-outline-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTask({{ task.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">لا توجد مهام حالياً</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">مهمة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">المشروع</label>
+                        <select class="form-select" name="project" required>
+                            <option value="">اختر المشروع...</option>
+                            {% for project in projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">عنوان المهمة</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الوصف</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">المسؤول</label>
+                            <select class="form-select" name="assigned_to" required>
+                                <option value="">اختر...</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">تاريخ التسليم</label>
+                            <input type="date" class="form-control" name="due_date" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الأولوية</label>
+                            <select class="form-select" name="priority" required>
+                                <option value="low">منخفضة</option>
+                                <option value="medium">متوسطة</option>
+                                <option value="high">عالية</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">الساعات المقدرة</label>
+                            <input type="number" class="form-control" name="estimated_hours">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="createTask()">إنشاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createTask() {
+    const form = document.getElementById('createTaskForm');
+    const formData = new FormData(form);
+    
+    fetch('{% url "projects:task-list" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    });
+}
+
+function deleteTask(taskId) {
+    if (confirm('هل أنت متأكد من حذف هذه المهمة؟')) {
+        fetch(`/projects/tasks/${taskId}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('حدث خطأ أثناء حذف المهمة');
+            }
+        });
+    }
+}
+
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams(formData);
+    
+    fetch(`{% url 'projects:task-list' %}?${params}`)
+        .then(response => response.text())
+        .then(html => {
+            document.querySelector('.table-responsive').innerHTML = html;
+        });
+});
+</script>
+{% endblock %}

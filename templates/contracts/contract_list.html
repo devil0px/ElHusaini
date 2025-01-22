@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}قائمة العقود{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">قائمة العقود</h1>
+                    <p class="text-muted">إدارة وعرض العقود</p>
+                </div>
+                <div>
+                    <a href="{% url 'contracts:contract-create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إضافة عقد جديد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر البحث -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="contract_number" class="form-label">رقم العقد</label>
+                            <input type="text" class="form-control" id="contract_number" name="contract_number" value="{{ request.GET.contract_number }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="client" class="form-label">العميل</label>
+                            <select class="form-select" id="client" name="client">
+                                <option value="">اختر العميل</option>
+                                {% for client in clients %}
+                                    <option value="{{ client.id }}" {% if request.GET.client == client.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ client.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="project" class="form-label">المشروع</label>
+                            <select class="form-select" id="project" name="project">
+                                <option value="">اختر المشروع</option>
+                                {% for project in projects %}
+                                    <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"i" %}selected{% endif %}>
+                                        {{ project.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">الحالة</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">اختر الحالة</option>
+                                <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>مسودة</option>
+                                <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+                                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>مكتمل</option>
+                                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                            <a href="{% url 'contracts:contract-list' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> إعادة تعيين
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قائمة العقود -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    {% if contract_list %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>رقم العقد</th>
+                                        <th>العميل</th>
+                                        <th>المشروع</th>
+                                        <th>تاريخ البدء</th>
+                                        <th>تاريخ الانتهاء</th>
+                                        <th>القيمة</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contract in contract_list %}
+                                        <tr>
+                                            <td>{{ contract.contract_number }}</td>
+                                            <td>{{ contract.client.name }}</td>
+                                            <td>{{ contract.project.name }}</td>
+                                            <td>{{ contract.start_date|date:"Y-m-d" }}</td>
+                                            <td>{{ contract.end_date|date:"Y-m-d" }}</td>
+                                            <td>{{ contract.value|floatformat:2 }} ريال</td>
+                                            <td>
+                                                <span class="badge bg-{% if contract.status == 'active' %}success{% elif contract.status == 'draft' %}warning{% elif contract.status == 'completed' %}info{% else %}danger{% endif %}">
+                                                    {{ contract.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'contracts:contract-detail' contract.pk %}" class="btn btn-sm btn-info" title="عرض">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="{% url 'contracts:contract-update' contract.pk %}" class="btn btn-sm btn-warning" title="تعديل">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'contracts:contract-delete' contract.pk %}" class="btn btn-sm btn-danger" title="حذف">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- الترقيم -->
+                        {% if is_paginated %}
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=1 %}">&laquo; الأول</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.previous_page_number %}">السابق</a>
+                                        </li>
+                                    {% endif %}
+
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?{% url_replace page=num %}">{{ num }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.next_page_number %}">التالي</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?{% url_replace page=page_obj.paginator.num_pages %}">الأخير &raquo;</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                            <p class="lead">لا توجد عقود حالياً</p>
+                            <a href="{% url 'contracts:contract-create' %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> إضافة عقد جديد
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

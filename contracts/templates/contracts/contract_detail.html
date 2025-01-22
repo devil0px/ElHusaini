@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}تفاصيل العقد {{ contract.contract_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                عقد رقم: {{ contract.contract_number }}
+                {% if contract.status == 'draft' %}
+                <span class="badge bg-secondary">مسودة</span>
+                {% elif contract.status == 'pending' %}
+                <span class="badge bg-warning">قيد المراجعة</span>
+                {% elif contract.status == 'active' %}
+                <span class="badge bg-success">ساري</span>
+                {% elif contract.status == 'completed' %}
+                <span class="badge bg-primary">مكتمل</span>
+                {% elif contract.status == 'cancelled' %}
+                <span class="badge bg-danger">ملغي</span>
+                {% endif %}
+            </h2>
+            <p class="text-muted">{{ contract.project.name }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.contracts.change_contract %}
+            <a href="{% url 'contracts:contract_update' contract.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> تعديل
+            </a>
+            {% endif %}
+            
+            {% if perms.contracts.delete_contract %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash"></i> حذف
+            </button>
+            {% endif %}
+
+            <a href="{% url 'contracts:contract_pdf' contract.pk %}" class="btn btn-secondary" target="_blank">
+                <i class="fas fa-file-pdf"></i> تحميل PDF
+            </a>
+
+            {% if perms.payments.add_payment and contract.status == 'active' %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                <i class="fas fa-plus"></i> إضافة دفعة
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- معلومات العقد -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معلومات العقد</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">العميل</dt>
+                        <dd class="col-sm-8">
+                            <a href="{% url 'clients:client_detail' contract.client.pk %}">
+                                {{ contract.client.name }}
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-4">المشروع</dt>
+                        <dd class="col-sm-8">
+                            <a href="{% url 'projects:project_detail' contract.project.pk %}">
+                                {{ contract.project.name }}
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-4">تاريخ البدء</dt>
+                        <dd class="col-sm-8">{{ contract.start_date|date }}</dd>
+
+                        <dt class="col-sm-4">تاريخ الانتهاء</dt>
+                        <dd class="col-sm-8">{{ contract.end_date|date }}</dd>
+
+                        <dt class="col-sm-4">المدة</dt>
+                        <dd class="col-sm-8">{{ contract.duration }} يوم</dd>
+
+                        <dt class="col-sm-4">القيمة</dt>
+                        <dd class="col-sm-8">{{ contract.value }} ريال</dd>
+
+                        <dt class="col-sm-4">الضريبة</dt>
+                        <dd class="col-sm-8">{{ contract.tax_percentage }}%</dd>
+
+                        <dt class="col-sm-4">الإجمالي</dt>
+                        <dd class="col-sm-8">{{ contract.total_value }} ريال</dd>
+
+                        <dt class="col-sm-4">تاريخ التوقيع</dt>
+                        <dd class="col-sm-8">
+                            {% if contract.signed_date %}
+                            {{ contract.signed_date|date }}
+                            {% else %}
+                            <span class="text-muted">لم يتم التوقيع بعد</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">المرفقات</dt>
+                        <dd class="col-sm-8">
+                            {% if contract.attachments.exists %}
+                            <ul class="list-unstyled mb-0">
+                                {% for attachment in contract.attachments.all %}
+                                <li>
+                                    <a href="{{ attachment.file.url }}" target="_blank">
+                                        <i class="fas fa-paperclip"></i>
+                                        {{ attachment.name }}
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <span class="text-muted">لا توجد مرفقات</span>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- شروط الدفع -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">شروط الدفع</h5>
+                </div>
+                <div class="card-body">
+                    {{ contract.payment_terms|linebreaks|default:"لا توجد شروط دفع محددة" }}
+                </div>
+            </div>
+
+            <!-- الملاحظات -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الملاحظات</h5>
+                </div>
+                <div class="card-body">
+                    {{ contract.notes|linebreaks|default:"لا توجد ملاحظات" }}
+                </div>
+            </div>
+        </div>
+
+        <!-- الدفعات -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الدفعات</h5>
+                </div>
+                <div class="card-body">
+                    <!-- ملخص الدفعات -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <h6 class="text-muted mb-1">قيمة العقد</h6>
+                                <h4 class="mb-0">{{ contract.total_value }} ريال</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <h6 class="text-muted mb-1">المدفوع</h6>
+                                <h4 class="mb-0 text-success">{{ contract.total_paid }} ريال</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <h6 class="text-muted mb-1">المتبقي</h6>
+                                <h4 class="mb-0 text-danger">{{ contract.remaining_amount }} ريال</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-3 text-center">
+                                <h6 class="text-muted mb-1">نسبة السداد</h6>
+                                <h4 class="mb-0">{{ contract.payments_percentage }}%</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- جدول الدفعات -->
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>رقم الدفعة</th>
+                                    <th>التاريخ</th>
+                                    <th>المبلغ</th>
+                                    <th>طريقة الدفع</th>
+                                    <th>المرجع</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in contract.payments.all %}
+                                <tr>
+                                    <td>{{ payment.payment_number }}</td>
+                                    <td>{{ payment.date|date }}</td>
+                                    <td>{{ payment.amount }} ريال</td>
+                                    <td>{{ payment.get_payment_method_display }}</td>
+                                    <td>{{ payment.reference_number }}</td>
+                                    <td>
+                                        {% if payment.status == 'pending' %}
+                                        <span class="badge bg-warning">قيد المراجعة</span>
+                                        {% elif payment.status == 'approved' %}
+                                        <span class="badge bg-success">تم الاعتماد</span>
+                                        {% elif payment.status == 'rejected' %}
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            {% if perms.payments.change_payment %}
+                                            <a href="{% url 'payments:payment_update' payment.pk %}" 
+                                               class="btn btn-sm btn-warning" 
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                            
+                                            {% if perms.payments.delete_payment %}
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deletePaymentModal{{ payment.pk }}"
+                                                    title="حذف">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+
+                                            {% if payment.receipt %}
+                                            <a href="{{ payment.receipt.url }}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="عرض الإيصال"
+                                               target="_blank">
+                                                <i class="fas fa-file-alt"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">لا توجد دفعات</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- سجل التغييرات -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">سجل التغييرات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        {% for log in contract.logs.all %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">{{ log.get_action_display }}</h6>
+                                <p class="mb-0">{{ log.description }}</p>
+                                <small class="text-muted">
+                                    {{ log.created_at|date:"Y-m-d H:i" }} - {{ log.user.get_full_name }}
+                                </small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">لا توجد سجلات</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if perms.contracts.delete_contract %}
+<!-- Modal تأكيد حذف العقد -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف العقد رقم "{{ contract.contract_number }}"؟</p>
+                {% if contract.payments.exists %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    تحذير: يوجد {{ contract.payments.count }} دفعة مرتبطة بهذا العقد.
+                    سيتم حذف جميع الدفعات المرتبطة بالعقد.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'contracts:contract_delete' contract.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal إضافة دفعة -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة دفعة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'payments:payment_create' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="contract" value="{{ contract.pk }}">
+                <div class="modal-body">
+                    {{ payment_form|crispy }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">إضافة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* تنسيق الجدول الزمني */
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    .timeline:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+        right: 20px;
+    }
+    .timeline-item {
+        position: relative;
+        padding-right: 50px;
+        padding-bottom: 30px;
+    }
+    .timeline-marker {
+        position: absolute;
+        right: 16px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #0d6efd;
+        border: 2px solid #fff;
+    }
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تفعيل tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if form.instance.pk %}تعديل موظف{% else %}إضافة موظف جديد{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">
+                        {% if form.instance.pk %}
+                            تعديل موظف: {{ form.instance.get_full_name }}
+                        {% else %}
+                            إضافة موظف جديد
+                        {% endif %}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="row g-3">
+                        {% csrf_token %}
+                        
+                        <!-- البيانات الشخصية -->
+                        <div class="col-md-12">
+                            <h4 class="mb-3">البيانات الشخصية</h4>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.first_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.middle_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.last_name|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.national_id|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.birth_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.gender|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.nationality|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.marital_status|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.photo|as_crispy_field }}
+                        </div>
+                        
+                        <!-- معلومات الاتصال -->
+                        <div class="col-md-12">
+                            <h4 class="mb-3">معلومات الاتصال</h4>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.email|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.mobile|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.phone|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.emergency_contact|as_crispy_field }}
+                        </div>
+                        
+                        <!-- معلومات الوظيفة -->
+                        <div class="col-md-12">
+                            <h4 class="mb-3">معلومات الوظيفة</h4>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.employee_id|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.department|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.position|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.hire_date|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.employment_type|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.salary|as_crispy_field }}
+                        </div>
+                        
+                        <!-- معلومات البنك -->
+                        <div class="col-md-12">
+                            <h4 class="mb-3">معلومات البنك</h4>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.bank_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.bank_account|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.iban|as_crispy_field }}
+                        </div>
+                        
+                        <!-- الوثائق -->
+                        <div class="col-md-12">
+                            <h4 class="mb-3">الوثائق</h4>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            {{ form.id_copy|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.contract_copy|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.other_documents|as_crispy_field }}
+                        </div>
+                        
+                        <!-- ملاحظات -->
+                        <div class="col-md-12">
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                        
+                        <!-- أزرار التحكم -->
+                        <div class="col-12">
+                            <hr>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                {% if form.instance.pk %}حفظ التغييرات{% else %}إضافة الموظف{% endif %}
+                            </button>
+                            <a href="{% url 'hr:employee_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                إلغاء
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .asteriskField {
+        color: red;
+        margin-right: 5px;
+    }
+    .card {
+        margin-bottom: 2rem;
+    }
+    h4 {
+        color: #666;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تنسيق حقول التاريخ
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        input.classList.add('form-control');
+    });
+
+    // تنسيق حقول الملفات
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.classList.add('form-control');
+    });
+
+    // معاينة الصورة عند اختيارها
+    const photoInput = document.querySelector('#id_photo');
+    if (photoInput) {
+        photoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let preview = document.querySelector('#photo_preview');
+                    if (!preview) {
+                        preview = document.createElement('img');
+                        preview.id = 'photo_preview';
+                        preview.style.maxWidth = '200px';
+                        preview.style.marginTop = '10px';
+                        photoInput.parentNode.appendChild(preview);
+                    }
+                    preview.src = e.target.result;
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

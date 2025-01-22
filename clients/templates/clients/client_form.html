@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if client %}تعديل عميل{% else %}إضافة عميل جديد{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                {% if client %}
+                تعديل عميل: {{ client.name }}
+                {% else %}
+                إضافة عميل جديد
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.client_type|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.phone|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.email|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        {{ form.address|as_crispy_field }}
+
+                        <div class="company-fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.commercial_record|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.tax_number|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {{ form.notes|as_crispy_field }}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {% if client %}حفظ التغييرات{% else %}إضافة العميل{% endif %}
+                            </button>
+                            <a href="{% url 'clients:client-list' %}" class="btn btn-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تعليمات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>نوع العميل:</strong>
+                            <ul>
+                                <li>فرد: للعملاء الأفراد</li>
+                                <li>شركة: للمؤسسات والشركات</li>
+                            </ul>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>معلومات الاتصال:</strong>
+                            <ul>
+                                <li>تأكد من صحة رقم الهاتف والبريد الإلكتروني</li>
+                                <li>العنوان يجب أن يكون مفصلاً وواضحاً</li>
+                            </ul>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>معلومات الشركة:</strong>
+                            <ul>
+                                <li>السجل التجاري ورقم الضريبة مطلوبة للشركات</li>
+                                <li>تأكد من صحة الأرقام قبل الإدخال</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>الملاحظات:</strong> أضف أي معلومات إضافية مهمة عن العميل
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تحسين قوائم الاختيار باستخدام Select2
+        $('#id_client_type').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر نوع العميل',
+            allowClear: true
+        });
+
+        // إظهار/إخفاء حقول الشركة
+        function toggleCompanyFields() {
+            var clientType = $('#id_client_type').val();
+            if (clientType === 'company') {
+                $('.company-fields').show();
+            } else {
+                $('.company-fields').hide();
+            }
+        }
+
+        $('#id_client_type').on('change', toggleCompanyFields);
+        toggleCompanyFields(); // تشغيل عند تحميل الصفحة
+    });
+</script>
+{% endblock %}

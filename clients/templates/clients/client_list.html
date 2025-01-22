@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}العملاء{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>العملاء</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.clients.add_client %}
+            <a href="{% url 'clients:client_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة عميل جديد
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">بحث</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ request.GET.search }}" 
+                           placeholder="اسم العميل، رقم الهاتف...">
+                </div>
+                <div class="col-md-3">
+                    <label for="type" class="form-label">نوع العميل</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="individual" {% if request.GET.type == 'individual' %}selected{% endif %}>فرد</option>
+                        <option value="company" {% if request.GET.type == 'company' %}selected{% endif %}>شركة</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">الحالة</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">الكل</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>نشط</option>
+                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>غير نشط</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">بحث</button>
+                    <a href="{% url 'clients:client_list' %}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول العملاء -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>رقم العميل</th>
+                            <th>الاسم</th>
+                            <th>نوع العميل</th>
+                            <th>رقم الهاتف</th>
+                            <th>البريد الإلكتروني</th>
+                            <th>عدد المشاريع</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td>{{ client.client_id }}</td>
+                            <td>
+                                <a href="{% url 'clients:client_detail' client.pk %}">
+                                    {{ client.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if client.type == 'individual' %}
+                                <span class="badge bg-info">فرد</span>
+                                {% else %}
+                                <span class="badge bg-primary">شركة</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ client.phone }}</td>
+                            <td>{{ client.email }}</td>
+                            <td>
+                                <a href="{% url 'projects:project_list' %}?client={{ client.pk }}">
+                                    {{ client.projects.count }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if client.is_active %}
+                                <span class="badge bg-success">نشط</span>
+                                {% else %}
+                                <span class="badge bg-danger">غير نشط</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'clients:client_detail' client.pk %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    {% if perms.clients.change_client %}
+                                    <a href="{% url 'clients:client_update' client.pk %}" 
+                                       class="btn btn-sm btn-warning" 
+                                       title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if perms.clients.delete_client %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal{{ client.pk }}"
+                                            title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if perms.clients.delete_client %}
+                                <!-- Modal تأكيد الحذف -->
+                                <div class="modal fade" id="deleteModal{{ client.pk }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">تأكيد الحذف</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>هل أنت متأكد من حذف العميل "{{ client.name }}"؟</p>
+                                                {% if client.projects.exists %}
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    تحذير: يوجد {{ client.projects.count }} مشروع مرتبط بهذا العميل.
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                <form action="{% url 'clients:client_delete' client.pk %}" method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">لا يوجد عملاء</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' '1' %}">
+                    الأول
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.previous_page_number %}">
+                    السابق
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' num %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.next_page_number %}">
+                    التالي
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.paginator.num_pages %}">
+                    الأخير
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تفعيل tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // تحسين قوائم الاختيار باستخدام Select2
+    $(document).ready(function() {
+        $('#type, #status').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر...',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

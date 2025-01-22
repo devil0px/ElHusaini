@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}الملف الشخصي{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- بطاقة الملف الشخصي -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" 
+                                 alt="{{ user.get_full_name }}" 
+                                 class="rounded-circle img-thumbnail"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center"
+                                 style="width: 150px; height: 150px;">
+                                <i class="fas fa-user fa-4x text-secondary"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h4 class="mb-1">{{ user.get_full_name }}</h4>
+                    <p class="text-muted mb-3">{{ user.employee.position.title }}</p>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadPictureModal">
+                            <i class="fas fa-camera"></i>
+                            تغيير الصورة
+                        </button>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="fw-bold">{{ user.employee.department.name }}</div>
+                            <small class="text-muted">القسم</small>
+                        </div>
+                        <div class="col">
+                            <div class="fw-bold">{{ user.date_joined|date }}</div>
+                            <small class="text-muted">تاريخ الانضمام</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- معلومات الاتصال -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معلومات الاتصال</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <i class="fas fa-envelope text-primary"></i>
+                            <span class="ms-2">{{ user.email }}</span>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-phone text-primary"></i>
+                            <span class="ms-2">{{ user.employee.phone }}</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-map-marker-alt text-primary"></i>
+                            <span class="ms-2">{{ user.employee.address }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- روابط سريعة -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">روابط سريعة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-key"></i>
+                            تغيير كلمة المرور
+                        </a>
+                        <a href="{% url 'hr:attendance_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-clock"></i>
+                            سجل الحضور
+                        </a>
+                        <a href="{% url 'hr:leave_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-alt"></i>
+                            طلبات الإجازة
+                        </a>
+                        <a href="{% url 'hr:payroll_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-money-bill-wave"></i>
+                            كشوف الرواتب
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- المعلومات الشخصية -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المعلومات الشخصية</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.first_name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.last_name|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.email|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.phone|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        {{ form.address|as_crispy_field }}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.emergency_contact_name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.emergency_contact_phone|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            حفظ التغييرات
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- الوثائق -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">الوثائق</h5>
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                        <i class="fas fa-upload"></i>
+                        رفع وثيقة
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>نوع الوثيقة</th>
+                                    <th>تاريخ الرفع</th>
+                                    <th>حالة التحقق</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for document in user.employee.documents.all %}
+                                <tr>
+                                    <td>{{ document.get_type_display }}</td>
+                                    <td>{{ document.uploaded_at|date }}</td>
+                                    <td>
+                                        {% if document.is_verified %}
+                                        <span class="badge bg-success">تم التحقق</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">في انتظار التحقق</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ document.file.url }}" class="btn btn-sm btn-info" target="_blank">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ document.file.url }}" class="btn btn-sm btn-secondary" download>
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            {% if not document.is_verified %}
+                                            <button type="button" class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteDocumentModal{{ document.pk }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Modal حذف الوثيقة -->
+                                        <div class="modal fade" id="deleteDocumentModal{{ document.pk }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">تأكيد الحذف</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>هل أنت متأكد من حذف هذه الوثيقة؟</p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                        <form action="{% url 'accounts:delete_document' document.pk %}" method="post">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-danger">حذف</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">لا توجد وثائق</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تغيير الصورة -->
+<div class="modal fade" id="uploadPictureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تغيير الصورة الشخصية</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'accounts:upload_picture' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="picture" class="form-label">اختر صورة</label>
+                        <input type="file" name="picture" id="picture" class="form-control" accept="image/*" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        يرجى اختيار صورة مربعة بحجم مناسب (يفضل 500×500 بكسل).
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">رفع الصورة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal رفع وثيقة -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">رفع وثيقة جديدة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'accounts:upload_document' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="document_type" class="form-label">نوع الوثيقة</label>
+                        <select name="type" id="document_type" class="form-select" required>
+                            <option value="">اختر نوع الوثيقة</option>
+                            {% for type, name in document_types %}
+                            <option value="{{ type }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="document" class="form-label">الملف</label>
+                        <input type="file" name="file" id="document" class="form-control" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        الملفات المسموح بها: PDF، JPG، PNG
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">رفع الوثيقة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحسين اختيار نوع الوثيقة باستخدام Select2
+    $(document).ready(function() {
+        $('#document_type').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر نوع الوثيقة',
+            dropdownParent: $('#uploadDocumentModal')
+        });
+    });
+</script>
+{% endblock %}

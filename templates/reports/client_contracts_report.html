@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير عقود العملاء{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير عقود العملاء</h1>
+                    <p class="text-muted">عرض تفاصيل العقود والمدفوعات</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ والحالة -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">حالة العقد</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">الكل</option>
+                                {% for status_choice in status_choices %}
+                                    <option value="{{ status_choice.0 }}" {% if status == status_choice.0 %}selected{% endif %}>
+                                        {{ status_choice.1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص العقود -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي العقود</h5>
+                    <h2 class="mb-0">{{ total_contracts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">القيمة الإجمالية</h5>
+                    <h2 class="mb-0">{{ total_amount|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المدفوعات</h5>
+                    <h2 class="mb-0">{{ total_payments|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المتبقي</h5>
+                    <h2 class="mb-0">{{ total_remaining|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل العقود -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تفاصيل العقود</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم العقد</th>
+                                    <th>العميل</th>
+                                    <th>المشروع</th>
+                                    <th>تاريخ البداية</th>
+                                    <th>تاريخ النهاية</th>
+                                    <th>القيمة</th>
+                                    <th>المدفوع</th>
+                                    <th>المتبقي</th>
+                                    <th>نسبة الإنجاز</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contract in contracts %}
+                                    <tr>
+                                        <td>{{ contract.contract_number }}</td>
+                                        <td>{{ contract.project.client.name }}</td>
+                                        <td>{{ contract.project.name }}</td>
+                                        <td>{{ contract.start_date|date:"Y-m-d" }}</td>
+                                        <td>{{ contract.end_date|date:"Y-m-d" }}</td>
+                                        <td>{{ contract.total_amount|floatformat:2 }}</td>
+                                        <td>{{ contract.total_payments|floatformat:2 }}</td>
+                                        <td>{{ contract.remaining_amount|floatformat:2 }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-{% if contract.completion_percentage >= 100 %}success{% elif contract.completion_percentage >= 50 %}info{% else %}warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ contract.completion_percentage }}%"
+                                                     aria-valuenow="{{ contract.completion_percentage }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    {{ contract.completion_percentage|floatformat:0 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if contract.status == 'completed' %}success{% elif contract.status == 'in_progress' %}info{% elif contract.status == 'pending' %}warning{% else %}danger{% endif %}">
+                                                {{ contract.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="10" class="text-center">لا توجد عقود في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحليل العقود -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع العقود حسب الحالة</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="contractStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تحليل المدفوعات الشهرية</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyPaymentsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge {
+        font-size: 0.875rem;
+    }
+    .progress {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // توزيع العقود حسب الحالة
+    var statusCtx = document.getElementById('contractStatusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for status in status_distribution %}'{{ status.status_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for status in status_distribution %}{{ status.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // تحليل المدفوعات الشهرية
+    var paymentsCtx = document.getElementById('monthlyPaymentsChart').getContext('2d');
+    new Chart(paymentsCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for month in monthly_payments %}'{{ month.month_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'المدفوعات',
+                data: [{% for month in monthly_payments %}{{ month.total_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: '#17a2b8'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

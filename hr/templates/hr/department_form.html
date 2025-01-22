@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if department %}تعديل قسم{% else %}إنشاء قسم جديد{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                {% if department %}
+                تعديل قسم: {{ department.name }}
+                {% else %}
+                إنشاء قسم جديد
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.code|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        {{ form.manager|as_crispy_field }}
+                        {{ form.description|as_crispy_field }}
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                {% if department %}حفظ التغييرات{% else %}إنشاء القسم{% endif %}
+                            </button>
+                            <a href="{% url 'hr:department_list' %}" class="btn btn-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تعليمات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>اسم القسم:</strong> يجب أن يكون اسماً واضحاً ومميزاً.
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>كود القسم:</strong> يجب أن يكون فريداً ولا يتكرر مع أقسام أخرى.
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>مدير القسم:</strong> يمكنك اختيار مدير للقسم من قائمة المستخدمين النشطين.
+                        </li>
+                        <li>
+                            <i class="fas fa-info-circle text-info"></i>
+                            <strong>الوصف:</strong> اكتب وصفاً موجزاً لمهام وأهداف القسم.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحسين اختيار المدير باستخدام Select2
+    $(document).ready(function() {
+        $('#id_manager').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر مدير القسم',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

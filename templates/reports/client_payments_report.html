@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير مدفوعات العملاء{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير مدفوعات العملاء</h1>
+                    <p class="text-muted">عرض تفاصيل المدفوعات والمستحقات</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ والعميل -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="client" class="form-label">العميل</label>
+                            <select class="form-select" id="client" name="client">
+                                <option value="">الكل</option>
+                                {% for client_choice in clients_list %}
+                                    <option value="{{ client_choice.id }}" {% if client_id == client_choice.id %}selected{% endif %}>
+                                        {{ client_choice.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ملخص المدفوعات -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المدفوعات</h5>
+                    <h2 class="mb-0">{{ total_payments|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">إجمالي المستحقات</h5>
+                    <h2 class="mb-0">{{ total_due|floatformat:2 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">نسبة التحصيل</h5>
+                    <h2 class="mb-0">{{ collection_percentage|floatformat:1 }}%</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">عدد المدفوعات</h5>
+                    <h2 class="mb-0">{{ payments_count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل المدفوعات -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تفاصيل المدفوعات</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>تاريخ الدفع</th>
+                                    <th>رقم الدفع</th>
+                                    <th>العميل</th>
+                                    <th>المشروع</th>
+                                    <th>العقد</th>
+                                    <th>المبلغ</th>
+                                    <th>نوع الدفع</th>
+                                    <th>رقم المرجع</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in payments %}
+                                    <tr>
+                                        <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
+                                        <td>{{ payment.payment_number }}</td>
+                                        <td>{{ payment.contract.project.client.name }}</td>
+                                        <td>{{ payment.contract.project.name }}</td>
+                                        <td>{{ payment.contract.contract_number }}</td>
+                                        <td>{{ payment.amount|floatformat:2 }}</td>
+                                        <td>{{ payment.get_payment_type_display }}</td>
+                                        <td>{{ payment.payment_number|default:"-" }}</td>
+                                        <td>{{ payment.notes|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="9" class="text-center">لا توجد مدفوعات في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحليل المدفوعات -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المدفوعات الشهرية</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyPaymentsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع طرق الدفع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- المستحقات حسب العميل -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المستحقات حسب العميل</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>العميل</th>
+                                    <th>إجمالي العقود</th>
+                                    <th>إجمالي المدفوعات</th>
+                                    <th>المستحقات</th>
+                                    <th>نسبة التحصيل</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client_summary in client_summaries %}
+                                    <tr>
+                                        <td>{{ client_summary.name }}</td>
+                                        <td>{{ client_summary.total_contracts|floatformat:2 }}</td>
+                                        <td>{{ client_summary.total_payments|floatformat:2 }}</td>
+                                        <td>{{ client_summary.total_due|floatformat:2 }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-{% if client_summary.collection_percentage >= 90 %}success{% elif client_summary.collection_percentage >= 50 %}info{% else %}warning{% endif %}"
+                                                     role="progressbar"
+                                                     style="width: {{ client_summary.collection_percentage }}%"
+                                                     aria-valuenow="{{ client_summary.collection_percentage }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    {{ client_summary.collection_percentage|floatformat:1 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .progress {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // المدفوعات الشهرية
+    var monthlyCtx = document.getElementById('monthlyPaymentsChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for month in monthly_payments %}'{{ month.month_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'المدفوعات',
+                data: [{% for month in monthly_payments %}{{ month.total_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                borderColor: '#17a2b8',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // توزيع طرق الدفع
+    var methodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+    new Chart(methodsCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for method in payment_methods %}'{{ method.method_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for method in payment_methods %}{{ method.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#28a745',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

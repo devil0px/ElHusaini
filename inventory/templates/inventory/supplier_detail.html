@@ -1,0 +1,336 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ supplier.name }} - تفاصيل المورد{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>{{ supplier.name }}</h2>
+        <p class="text-muted">{{ supplier.code }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{% url 'inventory:supplier-update' supplier.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> تعديل
+                </a>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Supplier Details -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">معلومات أساسية</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th>الشخص المسؤول:</th>
+                        <td>{{ supplier.contact_person }}</td>
+                    </tr>
+                    <tr>
+                        <th>رقم الهاتف:</th>
+                        <td>
+                            <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>البريد الإلكتروني:</th>
+                        <td>
+                            <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>العنوان:</th>
+                        <td>{{ supplier.address }}</td>
+                    </tr>
+                    <tr>
+                        <th>الرقم الضريبي:</th>
+                        <td>{{ supplier.tax_number|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>شروط الدفع:</th>
+                        <td>{{ supplier.payment_terms|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>شروط التسليم:</th>
+                        <td>{{ supplier.delivery_terms|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>الحالة:</th>
+                        <td>
+                            <span class="badge bg-{% if supplier.is_active %}success{% else %}danger{% endif %}">
+                                {{ supplier.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">التقييم</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h1>{{ average_rating|floatformat:1 }}</h1>
+                    <div class="rating">
+                        {% for i in "12345" %}
+                        <i class="fas fa-star{% if forloop.counter <= average_rating %} text-warning{% endif %}"></i>
+                        {% endfor %}
+                    </div>
+                    <p class="text-muted">من {{ evaluations.count }} تقييم</p>
+                </div>
+                
+                <hr>
+                
+                <h6>آخر التقييمات</h6>
+                {% for evaluation in evaluations %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="rating">
+                            {% for i in "12345" %}
+                            <i class="fas fa-star{% if forloop.counter <= evaluation.rating %} text-warning{% endif %}"></i>
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">{{ evaluation.created_at|date }}</small>
+                    </div>
+                    <p class="mb-0">{{ evaluation.notes }}</p>
+                    <small class="text-muted">بواسطة: {{ evaluation.created_by.get_full_name }}</small>
+                </div>
+                {% empty %}
+                <p class="text-center text-muted">لا توجد تقييمات</p>
+                {% endfor %}
+                
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEvaluationModal">
+                        <i class="fas fa-star"></i> إضافة تقييم
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Supplied Items -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">الأصناف الموردة</h5>
+            </div>
+            <div class="col text-end">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                    <i class="fas fa-plus"></i> إضافة صنف
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>الصنف</th>
+                        <th>السعر</th>
+                        <th>مدة التوريد</th>
+                        <th>مورد مفضل</th>
+                        <th>آخر توريد</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'inventory:item_detail' item.id %}">{{ item.name }}</a>
+                        </td>
+                        <td>{{ item.through.price }}</td>
+                        <td>{{ item.through.lead_time_days }} يوم</td>
+                        <td>
+                            {% if item.through.is_preferred %}
+                            <span class="badge bg-success">نعم</span>
+                            {% else %}
+                            <span class="badge bg-secondary">لا</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.through.last_supply_date|date|default:"-" }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editItemModal{{ item.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteItemModal{{ item.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">لا توجد أصناف موردة</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Purchase Requests -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">آخر طلبات الشراء</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>الرقم</th>
+                        <th>التاريخ</th>
+                        <th>عدد الأصناف</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in purchase_requests %}
+                    <tr>
+                        <td>{{ request.number }}</td>
+                        <td>{{ request.created_at|date }}</td>
+                        <td>{{ request.items.count }}</td>
+                        <td>{{ request.total_amount }}</td>
+                        <td>
+                            <span class="badge bg-{{ request.status_color }}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'inventory:purchase_request_detail' request.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">لا توجد طلبات شراء</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                هل أنت متأكد من حذف المورد "{{ supplier.name }}"؟
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'inventory:supplier-delete' supplier.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Evaluation Modal -->
+<div class="modal fade" id="addEvaluationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{% url 'inventory:supplier-evaluate' supplier.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة تقييم</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">التقييم</label>
+                        <div class="rating-input text-center">
+                            {% for i in "12345" %}
+                            <input type="radio" name="rating" value="{{ forloop.counter }}" id="star{{ forloop.counter }}" required>
+                            <label for="star{{ forloop.counter }}">
+                                <i class="fas fa-star"></i>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">ملاحظات</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'inventory:supplier-evaluate' supplier.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">حفظ التقييم</button>
+                </form>
+            </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rating-input {
+        direction: ltr;
+    }
+    .rating-input input {
+        display: none;
+    }
+    .rating-input label {
+        cursor: pointer;
+        padding: 5px;
+        font-size: 24px;
+        color: #ccc;
+    }
+    .rating-input label:hover,
+    .rating-input label:hover ~ label,
+    .rating-input input:checked ~ label {
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // تحديث نجوم التقييم عند المرور عليها
+        $('.rating-input label').hover(
+            function() {
+                $(this).addClass('text-warning').prevAll('label').addClass('text-warning');
+            },
+            function() {
+                if (!$(this).siblings('input:checked').length) {
+                    $('.rating-input label').removeClass('text-warning');
+                }
+            }
+        );
+    });
+</script>
+{% endblock %}

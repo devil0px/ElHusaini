@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}الوظائف{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>الوظائف</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.hr.add_position %}
+            <a href="{% url 'hr:position_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> إضافة وظيفة جديدة
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">بحث</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ request.GET.search }}" 
+                           placeholder="المسمى الوظيفي، القسم...">
+                </div>
+                <div class="col-md-4">
+                    <label for="department" class="form-label">القسم</label>
+                    <select name="department" id="department" class="form-select">
+                        <option value="">الكل</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" 
+                                {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">بحث</button>
+                    <a href="{% url 'hr:position_list' %}" class="btn btn-secondary">إعادة تعيين</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- جدول الوظائف -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>المسمى الوظيفي</th>
+                            <th>القسم</th>
+                            <th>عدد الموظفين</th>
+                            <th>الحد الأدنى للراتب</th>
+                            <th>الحد الأقصى للراتب</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for position in positions %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'hr:position_detail' position.pk %}">
+                                    {{ position.title }}
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'hr:department_detail' position.department.pk %}">
+                                    {{ position.department.name }}
+                                </a>
+                            </td>
+                            <td>{{ position.employees.count }}</td>
+                            <td>{{ position.salary_range_min }}</td>
+                            <td>{{ position.salary_range_max }}</td>
+                            <td>{{ position.created_at|date }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'hr:position_detail' position.pk %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="عرض التفاصيل">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    {% if perms.hr.change_position %}
+                                    <a href="{% url 'hr:position_update' position.pk %}" 
+                                       class="btn btn-sm btn-warning" 
+                                       title="تعديل">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if perms.hr.delete_position %}
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal{{ position.pk }}"
+                                            title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if perms.hr.delete_position %}
+                                <!-- Modal تأكيد الحذف -->
+                                <div class="modal fade" id="deleteModal{{ position.pk }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">تأكيد الحذف</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>هل أنت متأكد من حذف وظيفة "{{ position.title }}"؟</p>
+                                                {% if position.employees.exists %}
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    تحذير: يوجد {{ position.employees.count }} موظف في هذه الوظيفة.
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                <form action="{% url 'hr:position_delete' position.pk %}" method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">لا توجد وظائف</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' '1' %}">
+                    الأول
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.previous_page_number %}">
+                    السابق
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' num %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.next_page_number %}">
+                    التالي
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace request 'page' page_obj.paginator.num_pages %}">
+                    الأخير
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تفعيل tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // تحسين اختيار القسم باستخدام Select2
+    $(document).ready(function() {
+        $('#department').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'اختر القسم',
+            allowClear: true
+        });
+    });
+</script>
+{% endblock %}

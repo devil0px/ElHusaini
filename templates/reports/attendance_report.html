@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load core_tags %}
+
+{% block title %}تقرير الحضور والغياب{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">تقرير الحضور والغياب</h1>
+                    <p class="text-muted">عرض وتحليل بيانات الحضور والغياب للموظفين</p>
+                </div>
+                <div>
+                    <button onclick="window.print()" class="btn btn-primary">
+                        <i class="fas fa-print"></i> طباعة التقرير
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- فلتر التاريخ -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> تصفية
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إحصائيات عامة -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الحضور</h5>
+                    <h2 class="mb-0">{{ attendance_stats.present }}</h2>
+                    <small>{{ attendance_stats.present_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الغياب</h5>
+                    <h2 class="mb-0">{{ attendance_stats.absent }}</h2>
+                    <small>{{ attendance_stats.absent_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">التأخير</h5>
+                    <h2 class="mb-0">{{ attendance_stats.late }}</h2>
+                    <small>{{ attendance_stats.late_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">الإجازات</h5>
+                    <h2 class="mb-0">{{ attendance_stats.on_leave }}</h2>
+                    <small>{{ attendance_stats.leave_percentage }}% من الإجمالي</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الرسم البياني -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معدل الحضور اليومي</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="dailyAttendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">توزيع الحضور</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تفاصيل الحضور -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">سجل الحضور والغياب</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>الموظف</th>
+                                    <th>وقت الحضور</th>
+                                    <th>وقت الانصراف</th>
+                                    <th>الحالة</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_records %}
+                                    <tr>
+                                        <td>{{ record.date|date:"Y-m-d" }}</td>
+                                        <td>{{ record.employee.user.get_full_name }}</td>
+                                        <td>{{ record.time_in|time:"H:i" }}</td>
+                                        <td>{{ record.time_out|time:"H:i"|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if record.status == 'present' %}success{% elif record.status == 'absent' %}danger{% elif record.status == 'late' %}warning{% elif record.status == 'vacation' %}info{% else %}secondary{% endif %}">
+                                                {{ record.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ record.notes|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">لا توجد سجلات حضور في هذه الفترة</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // مخطط الحضور اليومي
+    var dailyCtx = document.getElementById('dailyAttendanceChart').getContext('2d');
+    new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ daily_labels|safe }},
+            datasets: [
+                {
+                    label: 'حاضر',
+                    data: {{ daily_present|safe }},
+                    borderColor: '#28a745',
+                    backgroundColor: '#28a74520',
+                    fill: true
+                },
+                {
+                    label: 'غائب',
+                    data: {{ daily_absent|safe }},
+                    borderColor: '#dc3545',
+                    backgroundColor: '#dc354520',
+                    fill: true
+                },
+                {
+                    label: 'متأخر',
+                    data: {{ daily_late|safe }},
+                    borderColor: '#ffc107',
+                    backgroundColor: '#ffc10720',
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // مخطط توزيع الحضور
+    var distributionCtx = document.getElementById('attendanceDistributionChart').getContext('2d');
+    new Chart(distributionCtx, {
+        type: 'pie',
+        data: {
+            labels: ['حاضر', 'غائب', 'متأخر', 'إجازة'],
+            datasets: [{
+                data: [
+                    {{ attendance_stats.present }},
+                    {{ attendance_stats.absent }},
+                    {{ attendance_stats.late }},
+                    {{ attendance_stats.on_leave }}
+                ],
+                backgroundColor: [
+                    '#28a745',  // حاضر
+                    '#dc3545',  // غائب
+                    '#ffc107',  // متأخر
+                    '#17a2b8'   // إجازة
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

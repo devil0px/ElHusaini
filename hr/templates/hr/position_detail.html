@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ position.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{ position.title }}</h2>
+            <p class="text-muted">
+                القسم: 
+                <a href="{% url 'hr:department_detail' position.department.pk %}">
+                    {{ position.department.name }}
+                </a>
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if perms.hr.change_position %}
+            <a href="{% url 'hr:position_update' position.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> تعديل
+            </a>
+            {% endif %}
+            {% if perms.hr.delete_position %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash"></i> حذف
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- معلومات الوظيفة -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">معلومات الوظيفة</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">القسم</dt>
+                        <dd class="col-sm-7">
+                            <a href="{% url 'hr:department_detail' position.department.pk %}">
+                                {{ position.department.name }}
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-5">الحد الأدنى للراتب</dt>
+                        <dd class="col-sm-7">{{ position.salary_range_min }}</dd>
+
+                        <dt class="col-sm-5">الحد الأقصى للراتب</dt>
+                        <dd class="col-sm-7">{{ position.salary_range_max }}</dd>
+
+                        <dt class="col-sm-5">عدد الموظفين</dt>
+                        <dd class="col-sm-7">{{ position.employees.count }}</dd>
+
+                        <dt class="col-sm-5">تاريخ الإنشاء</dt>
+                        <dd class="col-sm-7">{{ position.created_at|date }}</dd>
+
+                        <dt class="col-sm-5">آخر تحديث</dt>
+                        <dd class="col-sm-7">{{ position.updated_at|date }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- الوصف الوظيفي -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">الوصف الوظيفي</h5>
+                </div>
+                <div class="card-body">
+                    {% if position.description %}
+                        {{ position.description|linebreaks }}
+                    {% else %}
+                        <p class="text-muted mb-0">لا يوجد وصف وظيفي</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- المتطلبات -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">المتطلبات</h5>
+                </div>
+                <div class="card-body">
+                    {% if position.requirements %}
+                        {{ position.requirements|linebreaks }}
+                    {% else %}
+                        <p class="text-muted mb-0">لا توجد متطلبات محددة</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- الموظفون في هذه الوظيفة -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">الموظفون</h5>
+                    {% if perms.hr.add_employeeprofile %}
+                    <a href="{% url 'hr:employee_create' %}?position={{ position.pk }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> إضافة موظف
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>رقم الموظف</th>
+                                    <th>تاريخ التعيين</th>
+                                    <th>الراتب</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in position.employees.all %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'hr:employee_detail' employee.pk %}">
+                                            {{ employee.user.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ employee.employee_id }}</td>
+                                    <td>{{ employee.hire_date|date }}</td>
+                                    <td>
+                                        {% if perms.hr.view_salary %}
+                                            {{ employee.salary }}
+                                        {% else %}
+                                            <span class="text-muted">غير مصرح</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if employee.is_active %}
+                                        <span class="badge bg-success">نشط</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">غير نشط</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'hr:employee_detail' employee.pk %}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="عرض التفاصيل">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if perms.hr.change_employeeprofile %}
+                                            <a href="{% url 'hr:employee_update' employee.pk %}" 
+                                               class="btn btn-sm btn-warning" 
+                                               title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">لا يوجد موظفون في هذه الوظيفة</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if perms.hr.delete_position %}
+<!-- Modal تأكيد الحذف -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>هل أنت متأكد من حذف وظيفة "{{ position.title }}"؟</p>
+                {% if position.employees.exists %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    تحذير: يوجد {{ position.employees.count }} موظف في هذه الوظيفة.
+                    يجب نقل هؤلاء الموظفين إلى وظائف أخرى قبل الحذف.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form action="{% url 'hr:position_delete' position.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" 
+                            {% if position.employees.exists %}disabled{% endif %}>
+                        حذف
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تفعيل tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}
